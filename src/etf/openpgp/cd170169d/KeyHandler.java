@@ -1,16 +1,11 @@
-package etf.openpgp.cd170169;
+package etf.openpgp.cd170169d;
 
+import java.io.IOException;
 import java.security.*;
+import java.util.ArrayList;
 import java.util.Date;
 
-import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
-import org.bouncycastle.bcpg.SymmetricKeyAlgorithmTags;
-import org.bouncycastle.bcpg.sig.Features;
-import org.bouncycastle.bcpg.sig.KeyFlags;
-import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
-import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
-import org.bouncycastle.crypto.params.RSAKeyGenerationParameters;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.jcajce.JcaPGPPublicKeyRingCollection;
@@ -19,23 +14,21 @@ import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
 import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
-import org.bouncycastle.openpgp.operator.bc.BcPGPDigestCalculatorProvider;
-import org.bouncycastle.openpgp.operator.bc.BcPGPKeyPair;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
-import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 
 public class KeyHandler {
 
     private static final String RSA_ALG = "RSA";
     private static final String provider = "BC";
 
-    public static PGPPublicKeyRingCollection publicKeyRings;
-    public static PGPSecretKeyRingCollection secretKeyRings;
+    private PGPPublicKeyRingCollection publicKeyRings;
+    private PGPSecretKeyRingCollection secretKeyRings;
 
-    public KeyHandler(){
+    public KeyHandler() throws IOException, PGPException {
         Security.addProvider(new BouncyCastleProvider());
+        publicKeyRings = new JcaPGPPublicKeyRingCollection(new ArrayList<>());
+        secretKeyRings = new JcaPGPSecretKeyRingCollection(new ArrayList<>());
     }
 
 
@@ -84,7 +77,13 @@ public class KeyHandler {
 
         publicKeyRings = JcaPGPPublicKeyRingCollection.addPublicKeyRing(publicKeyRings, publicKeyRing);
         secretKeyRings = JcaPGPSecretKeyRingCollection.addSecretKeyRing(secretKeyRings, secretKeyRing);
-
     }
 
+    public PGPPublicKeyRingCollection getPublicKeyRings() {
+        return publicKeyRings;
+    }
+
+    public PGPSecretKeyRingCollection getSecretKeyRings() {
+        return secretKeyRings;
+    }
 }
