@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Iterator;
 
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -86,4 +87,7 @@ public class KeyHandler {
     public PGPSecretKeyRingCollection getSecretKeyRings() {
         return secretKeyRings;
     }
+
+
+
 }

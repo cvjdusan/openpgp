@@ -7,26 +7,31 @@ import java.util.logging.FileHandler;
 
 public class KeyTableModel extends AbstractTableModel {
 
-    private final List<String> summaries;
+    private List<Key> keys;
 
     String[] columnNames  = new String[] { "Ime", "Email", "keyID" };
 
     public KeyTableModel() {
-        this.summaries = new ArrayList<String>();
-        this.summaries.add("Test");
-        this.summaries.add("Test2");
+        this.keys = new ArrayList<Key>();
     }
-    // Other TabelModel methods...
 
     public void refresh() {
         //summaries = new ArrayList<>(FileHandler.getCompletedPlayers());
-        summaries.add("Test3");
         fireTableDataChanged();
+    }
+
+    public void add(Key k){
+        this.keys.add(k);
+        refresh();
+    }
+
+    public void clearList(){
+        this.keys.clear();
     }
 
     @Override
     public int getRowCount() {
-        return summaries.size();
+        return keys.size();
     }
 
     @Override
@@ -42,14 +47,17 @@ public class KeyTableModel extends AbstractTableModel {
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        String personObj = summaries.get(rowIndex);
+        Key key = keys.get(rowIndex);
 
         switch(columnIndex){
-            case 0: return personObj;
-            case 1: return personObj;
-            case 2: return personObj;
-            case 3: return personObj;
-            default : return null;
+            case 0:
+                return key.getName();
+            case 1:
+                return key.getEmail();
+            case 2:
+                return key.getId();
+            default :
+                return null;
         }
     }
 }

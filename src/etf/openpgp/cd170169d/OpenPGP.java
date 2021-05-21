@@ -1,9 +1,13 @@
 package etf.openpgp.cd170169d;
 
-import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -12,6 +16,7 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+
 
 public class OpenPGP {
     private KeyHandler keyHandler;
@@ -66,22 +71,17 @@ public class OpenPGP {
         JPanel south = new JPanel(new FlowLayout());
         panelShowKeys = new JPanel(new BorderLayout());
 
-        // Column Names
-
-
-        // Initializing the JTable
-
         publicModel = new KeyTableModel();
         privateModel = new KeyTableModel();
 
         publicTable = new JTable();
         privateTable = new JTable();
 
+        createPopupMenu();
+
         publicTable.setModel(publicModel);
         privateTable.setModel(privateModel);
 
-     //   j.setTableHeader(new JTableHeader());
-       // j2.setTableHeader(new JTableHeader());
         JScrollPane sp1 = new JScrollPane(publicTable);
         JScrollPane sp2 = new JScrollPane(privateTable);
 
@@ -93,21 +93,13 @@ public class OpenPGP {
         JButton imp = new JButton("Uvezi kljuc");
 
         imp.addActionListener(click -> {
-            KeyTableModel model = (KeyTableModel) publicTable.getModel();
-            model.refresh();
-           // publicModel.addRow(new String[]{"Dusa", "lele", "mika"});
-           // publicModel.fireTableDataChanged();
-        });
 
+        });
 
         south.add(imp);
         panelShowKeys.add(p1, BorderLayout.WEST);
         panelShowKeys.add(p2, BorderLayout.EAST);
         panelShowKeys.add(south, BorderLayout.SOUTH);
-
-
-     //   panelGridKeys.setAutoscrolls(true);
-
 //        tabbedPane.addChangeListener(new ChangeListener() {
 //            public void stateChanged(ChangeEvent e) {
 //                if(tabbedPane.getSelectedIndex() == 0) {
@@ -125,24 +117,92 @@ public class OpenPGP {
 //        });
     }
 
-    private void getAndShowKeys(JPanel panelGridKeys) throws NoSuchAlgorithmException, PGPException, NoSuchProviderException {
+    private void createPopupMenu(){
+        final JPopupMenu popupMenuPublic = new JPopupMenu();
+        final JPopupMenu popupMenuPrivate = new JPopupMenu();
 
+        JMenuItem deleteItem = new JMenuItem("Obrisi");
+        JMenuItem exportItem = new JMenuItem("Eksportuj");
 
+        popupMenuPublic.add(deleteItem);
+        popupMenuPublic.add(exportItem);
+        publicTable.setComponentPopupMenu(popupMenuPublic);
 
+        setPopupMenuListeners(popupMenuPublic, publicTable, publicModel);
+        setPopupMenuListeners(popupMenuPrivate, privateTable, privateModel);
 
-        //        PGPPublicKeyRingCollection pc = keyHandler.getPublicKeyRings();
-//        pc.forEach(p -> {
-//            String[] temp = p.getPublicKey().getUserIDs().next().split(" ");
-//            String name = temp[0];
-//            String email = temp[1];
-//            String keyId = Long.toHexString(p.getPublicKey().getKeyID()).toUpperCase();
-//            JLabel l = new JLabel(name + " " + email + "" + keyId);
-//            JCheckBox c = new JCheckBox();
-//            panelGridKeys.add(l);
-//            panelGridKeys.add(c);
-//        });
+        deleteItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(frame,
+                        publicTable.getValueAt(publicTable.getSelectedRow(), 0).toString());
+            }
+        });
 
+        exportItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(frame,
+                        publicTable.getValueAt(publicTable.getSelectedRow(), 0).toString() + "EX");
+            }
+        });
+
+        JMenuItem deleteItem1 = new JMenuItem("Obrisi");
+        JMenuItem exportItem1 = new JMenuItem("Eksportuj");
+
+        deleteItem1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(frame,
+                        privateTable.getValueAt(privateTable.getSelectedRow(), 0).toString());
+            }
+        });
+
+        exportItem1.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(frame,
+                        privateTable.getValueAt(privateTable.getSelectedRow(), 0).toString() + "EX");
+            }
+        });
+
+        popupMenuPrivate.add(deleteItem1);
+        popupMenuPrivate.add(exportItem1);
+        privateTable.setComponentPopupMenu(popupMenuPrivate);
     }
+
+    private void setPopupMenuListeners(JPopupMenu popupMenu, JTable table, KeyTableModel tableModel){
+
+        popupMenu.addPopupMenuListener(new PopupMenuListener() {
+
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        int rowAtPoint = table.rowAtPoint(SwingUtilities.convertPoint(popupMenu, new Point(0, 0), table));
+                        if (rowAtPoint > -1) {
+                            table.setRowSelectionInterval(rowAtPoint, rowAtPoint);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+                // TODO Auto-generated method stub
+
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {
+                // TODO Auto-generated method stub
+
+            }
+        });
+    }
+
+
 
     private void initPanelGenerateKeys(){
 
@@ -200,6 +260,7 @@ public class OpenPGP {
                 } else {
                     keyHandler.createKeyRing(name.getText(), email.getText(), String.valueOf(password.getPassword()),
                             Integer.parseInt(listString1[op1[0]]), true);
+                    refreshAllTables();
                     showMessage("Uspeh.");
                 }
             } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
@@ -217,6 +278,50 @@ public class OpenPGP {
 
     public void showMessage(String msg){
         JOptionPane.showMessageDialog(null, msg);
+    }
+
+    public void refreshAllTables(){
+        refreshPublicTable();
+        refreshPrivateTable();
+    }
+
+    public void refreshPublicTable(){
+        KeyTableModel modelPublic = (KeyTableModel) publicTable.getModel();
+        modelPublic.clearList();
+
+        PGPPublicKeyRingCollection pc = keyHandler.getPublicKeyRings();
+        pc.forEach(p -> {
+            Key k = createKeyPublic(p);
+            modelPublic.add(k);
+        });
+    }
+
+    public void refreshPrivateTable(){
+        KeyTableModel modelPrivate = (KeyTableModel) privateTable.getModel();
+        modelPrivate.clearList();
+
+        PGPSecretKeyRingCollection pc = keyHandler.getSecretKeyRings();
+        pc.forEach(p -> {
+            Key k = createKeySecret(p);
+            modelPrivate.add(k);
+        });
+
+    }
+
+    public Key createKeyPublic(PGPPublicKeyRing p){
+        String[] temp = p.getPublicKey().getUserIDs().next().split(" ");
+        String name = temp[0];
+        String email = temp[1];
+        String keyId = Long.toHexString(p.getPublicKey().getKeyID()).toUpperCase();
+        return new Key(name, email, keyId);
+    }
+
+    public Key createKeySecret(PGPSecretKeyRing p){
+        String[] temp = p.getSecretKey().getUserIDs().next().split(" ");
+        String name = temp[0];
+        String email = temp[1];
+        String keyId = Long.toHexString(p.getSecretKey().getKeyID()).toUpperCase();
+        return new Key(name, email, keyId);
     }
 
 
