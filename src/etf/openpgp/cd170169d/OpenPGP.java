@@ -1,13 +1,9 @@
 package etf.openpgp.cd170169d;
 
 import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -18,12 +14,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 
 public class OpenPGP {
+    private KeyHandler keyHandler;
 
     private JFrame frame;
     private JTabbedPane tabbedPane;
-    private JScrollPane panelShowKeys;
-    private JPanel panelGenerateKeys;
-    private KeyHandler keyHandler;
+    private JPanel panelShowKeys, panelGenerateKeys, panelSendMessage;
+
+    private JTable publicTable, privateTable;
+    private KeyTableModel publicModel, privateModel;
 
     public OpenPGP() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
         keyHandler = new KeyHandler();
@@ -59,43 +57,91 @@ public class OpenPGP {
 
         tabbedPane.add(panelShowKeys, "Prikaz kljuceva");
         tabbedPane.add(panelGenerateKeys, "Generisanje kljuceva");
+        tabbedPane.add(panelSendMessage, "Poruke");
     }
 
     private void initPanelShowKeys() {
-        JPanel panelGridKeys = new JPanel(new GridLayout(0, 2));
-        panelShowKeys = new JScrollPane(panelGridKeys);
-        panelGridKeys.setAutoscrolls(true);
+        JPanel p1 = new JPanel(new BorderLayout(5,5));
+        JPanel p2 = new JPanel(new BorderLayout(5,5));
+        JPanel south = new JPanel(new FlowLayout());
+        panelShowKeys = new JPanel(new BorderLayout());
 
-        tabbedPane.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                if(tabbedPane.getSelectedIndex() == 0) {
-                    try {
-                        getAndShowKeys(panelGridKeys);
-                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
-                        noSuchAlgorithmException.printStackTrace();
-                    } catch (PGPException pgpException) {
-                        pgpException.printStackTrace();
-                    } catch (NoSuchProviderException noSuchProviderException) {
-                        noSuchProviderException.printStackTrace();
-                    }
-                }
-            }
+        // Column Names
+
+
+        // Initializing the JTable
+
+        publicModel = new KeyTableModel();
+        privateModel = new KeyTableModel();
+
+        publicTable = new JTable();
+        privateTable = new JTable();
+
+        publicTable.setModel(publicModel);
+        privateTable.setModel(privateModel);
+
+     //   j.setTableHeader(new JTableHeader());
+       // j2.setTableHeader(new JTableHeader());
+        JScrollPane sp1 = new JScrollPane(publicTable);
+        JScrollPane sp2 = new JScrollPane(privateTable);
+
+        p1.add(sp1, BorderLayout.CENTER);
+        p1.add(new JLabel("Javni", JLabel.CENTER), BorderLayout.NORTH);
+        p2.add(sp2, BorderLayout.CENTER);
+        p2.add(new JLabel("Privatni", JLabel.CENTER), BorderLayout.NORTH);
+
+        JButton imp = new JButton("Uvezi kljuc");
+
+        imp.addActionListener(click -> {
+            KeyTableModel model = (KeyTableModel) publicTable.getModel();
+            model.refresh();
+           // publicModel.addRow(new String[]{"Dusa", "lele", "mika"});
+           // publicModel.fireTableDataChanged();
         });
+
+
+        south.add(imp);
+        panelShowKeys.add(p1, BorderLayout.WEST);
+        panelShowKeys.add(p2, BorderLayout.EAST);
+        panelShowKeys.add(south, BorderLayout.SOUTH);
+
+
+     //   panelGridKeys.setAutoscrolls(true);
+
+//        tabbedPane.addChangeListener(new ChangeListener() {
+//            public void stateChanged(ChangeEvent e) {
+//                if(tabbedPane.getSelectedIndex() == 0) {
+//                    try {
+//                        getAndShowKeys(panelGridKeys);
+//                    } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+//                        noSuchAlgorithmException.printStackTrace();
+//                    } catch (PGPException pgpException) {
+//                        pgpException.printStackTrace();
+//                    } catch (NoSuchProviderException noSuchProviderException) {
+//                        noSuchProviderException.printStackTrace();
+//                    }
+//                }
+//            }
+//        });
     }
 
     private void getAndShowKeys(JPanel panelGridKeys) throws NoSuchAlgorithmException, PGPException, NoSuchProviderException {
-        //keyHandler.createKeyRing("a","a","a", 1024, false);
-        PGPPublicKeyRingCollection pc = keyHandler.getPublicKeyRings();
-        pc.forEach(p -> {
-            String[] temp = p.getPublicKey().getUserIDs().next().split(" ");
-            String name = temp[0];
-            String email = temp[1];
-            String keyId = Long.toHexString(p.getPublicKey().getKeyID()).toUpperCase();
-            JLabel l = new JLabel(name + " " + email + "" + keyId);
-            JCheckBox c = new JCheckBox();
-            panelGridKeys.add(l);
-            panelGridKeys.add(c);
-        });
+
+
+
+
+        //        PGPPublicKeyRingCollection pc = keyHandler.getPublicKeyRings();
+//        pc.forEach(p -> {
+//            String[] temp = p.getPublicKey().getUserIDs().next().split(" ");
+//            String name = temp[0];
+//            String email = temp[1];
+//            String keyId = Long.toHexString(p.getPublicKey().getKeyID()).toUpperCase();
+//            JLabel l = new JLabel(name + " " + email + "" + keyId);
+//            JCheckBox c = new JCheckBox();
+//            panelGridKeys.add(l);
+//            panelGridKeys.add(c);
+//        });
+
     }
 
     private void initPanelGenerateKeys(){
@@ -128,7 +174,7 @@ public class OpenPGP {
 
         String[] listString1 = { "1024", "2048", "4096"};
         JComboBox firstList = new JComboBox(listString1);
-        firstList.setSelectedIndex(1);
+        firstList.setSelectedIndex(0);
         panel1.add(firstList);
 
         final int[] op1 = new int[1];
@@ -147,25 +193,30 @@ public class OpenPGP {
         panel1.add(new JLabel());
         panel1.add(button);
 
-        button.addActionListener(new ActionListener() {
-
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    keyHandler.createKeyRing(name.getText(), email.getText(), password.getText(),
-                            Integer.parseInt(listString1[op1[0]]), false);
-                } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
-                    noSuchAlgorithmException.printStackTrace();
-                } catch (PGPException pgpException) {
-                    pgpException.printStackTrace();
-                } catch (NoSuchProviderException noSuchProviderException) {
-                    noSuchProviderException.printStackTrace();
+        button.addActionListener(e -> {
+            try {
+                if(name.getText().equals("") || email.getText().equals("") || password.getPassword().length == 0){
+                   showMessage("Greska. Postoje prazna polja.");
+                } else {
+                    keyHandler.createKeyRing(name.getText(), email.getText(), String.valueOf(password.getPassword()),
+                            Integer.parseInt(listString1[op1[0]]), true);
+                    showMessage("Uspeh.");
                 }
+            } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
+                noSuchAlgorithmException.printStackTrace();
+            } catch (PGPException pgpException) {
+                pgpException.printStackTrace();
+            } catch (NoSuchProviderException noSuchProviderException) {
+                noSuchProviderException.printStackTrace();
             }
         });
 
         panel.add(panel1);
         panelGenerateKeys.add(panel, BorderLayout.CENTER);
+    }
+
+    public void showMessage(String msg){
+        JOptionPane.showMessageDialog(null, msg);
     }
 
 
