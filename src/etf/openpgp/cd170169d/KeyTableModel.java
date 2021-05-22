@@ -3,7 +3,7 @@ package etf.openpgp.cd170169d;
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.FileHandler;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class KeyTableModel extends AbstractTableModel {
 
@@ -59,5 +59,22 @@ public class KeyTableModel extends AbstractTableModel {
             default :
                 return null;
         }
+    }
+    
+    public Long getKeyLongId(String id){
+        Long value = null;
+        
+        for(int i = 0; i < keys.size(); i++){
+            if(keys.get(i).getId().equals(id)) {
+                value = keys.get(i).getLongKeyId();
+                break;
+            }
+        }
+        
+        return value;
+    }
+
+    public void deleteKey(String id1) {
+        keys.removeIf( id -> id.equals(id1));
     }
 }

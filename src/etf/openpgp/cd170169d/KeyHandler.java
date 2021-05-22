@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.security.*;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -17,19 +16,21 @@ import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
+import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.bouncycastle.util.encoders.Hex;
 
 public class KeyHandler {
 
     private static final String RSA_ALG = "RSA";
     private static final String provider = "BC";
 
-    private PGPPublicKeyRingCollection publicKeyRings;
-    private PGPSecretKeyRingCollection secretKeyRings;
+    private PGPPublicKeyRingCollection pgpPublicKeyRings;
+    private PGPSecretKeyRingCollection pgpSecretKeyRings;
 
     public KeyHandler() throws IOException, PGPException {
         Security.addProvider(new BouncyCastleProvider());
-        publicKeyRings = new JcaPGPPublicKeyRingCollection(new ArrayList<>());
-        secretKeyRings = new JcaPGPSecretKeyRingCollection(new ArrayList<>());
+        pgpPublicKeyRings = new JcaPGPPublicKeyRingCollection(new ArrayList<>());
+        pgpSecretKeyRings = new JcaPGPSecretKeyRingCollection(new ArrayList<>());
     }
 
 
@@ -76,18 +77,37 @@ public class KeyHandler {
         PGPPublicKeyRing publicKeyRing = pgpKeyRingGenerator.generatePublicKeyRing();
         PGPSecretKeyRing secretKeyRing = pgpKeyRingGenerator.generateSecretKeyRing();
 
-        publicKeyRings = JcaPGPPublicKeyRingCollection.addPublicKeyRing(publicKeyRings, publicKeyRing);
-        secretKeyRings = JcaPGPSecretKeyRingCollection.addSecretKeyRing(secretKeyRings, secretKeyRing);
+        pgpPublicKeyRings = JcaPGPPublicKeyRingCollection.addPublicKeyRing(pgpPublicKeyRings, publicKeyRing);
+        pgpSecretKeyRings = JcaPGPSecretKeyRingCollection.addSecretKeyRing(pgpSecretKeyRings, secretKeyRing);
     }
 
-    public PGPPublicKeyRingCollection getPublicKeyRings() {
-        return publicKeyRings;
+    public PGPPublicKeyRingCollection getPgpPublicKeyRings() {
+        return pgpPublicKeyRings;
     }
 
-    public PGPSecretKeyRingCollection getSecretKeyRings() {
-        return secretKeyRings;
+    public PGPSecretKeyRingCollection getPgpSecretKeyRings() {
+        return pgpSecretKeyRings;
     }
 
+    public void deletePublicKey(Long keyLongId) throws PGPException {
+        PGPPublicKeyRing pgpPublicKeyRing = pgpPublicKeyRings.getPublicKeyRing(keyLongId);
+        pgpPublicKeyRings = JcaPGPPublicKeyRingCollection.removePublicKeyRing(pgpPublicKeyRings, pgpPublicKeyRing);
+        String fp = Hex.toHexString(pgpPublicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+     //   File f = new File("src/etf/openpgp/cd170169d/openpgp/keys/public/" + fp + ".asc");
+     //   f.delete();
+    }
 
+    public void deletePrivateKey(String password, Long keyLongId) throws PGPException {
+        PGPSecretKeyRing pgpSecretKeyRing = pgpSecretKeyRings.getSecretKeyRing(keyLongId);
 
+        JcePBESecretKeyDecryptorBuilder decryptorBuilder = new JcePBESecretKeyDecryptorBuilder();
+
+        pgpSecretKeyRing.getSecretKey().extractPrivateKey(decryptorBuilder.build(password.toCharArray()));
+
+        pgpSecretKeyRings = JcaPGPSecretKeyRingCollection.removeSecretKeyRing(pgpSecretKeyRings, pgpSecretKeyRing);
+
+        String fp = Hex.toHexString(pgpSecretKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+        //   File f = new File("src/etf/openpgp/cd170169d/openpgp/keys/public/" + fp + ".asc");
+        //   f.delete();
+    }
 }

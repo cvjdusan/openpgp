@@ -4,8 +4,6 @@ import org.bouncycastle.openpgp.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import java.awt.*;
@@ -134,8 +132,8 @@ public class OpenPGP {
         deleteItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(frame,
-                        publicTable.getValueAt(publicTable.getSelectedRow(), 0).toString());
+                String id = publicTable.getValueAt(publicTable.getSelectedRow(), 2).toString();
+                deleteAndRefreshPublic(id);
             }
         });
 
@@ -153,8 +151,20 @@ public class OpenPGP {
         deleteItem1.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(frame,
-                        privateTable.getValueAt(privateTable.getSelectedRow(), 0).toString());
+                String id = privateTable.getValueAt(privateTable.getSelectedRow(), 2).toString();
+                JPanel panel = new JPanel();
+                JLabel label = new JLabel("Unesite lozinku:");
+                JPasswordField pass = new JPasswordField(10);
+                panel.add(label);
+                panel.add(pass);
+                String[] options = new String[]{"OK", "Cancel"};
+                int option = JOptionPane.showOptionDialog(null, panel, "The title",
+                        JOptionPane.NO_OPTION, JOptionPane.PLAIN_MESSAGE,
+                        null, options, options[1]);
+                if(option == 0) {
+                    char[] password = pass.getPassword();
+                    deleteAndRefreshPrivate(String.valueOf(password),id);
+                }
             }
         });
 
@@ -169,6 +179,33 @@ public class OpenPGP {
         popupMenuPrivate.add(deleteItem1);
         popupMenuPrivate.add(exportItem1);
         privateTable.setComponentPopupMenu(popupMenuPrivate);
+    }
+
+    private void deleteAndRefreshPublic(String id) {
+        try {
+            keyHandler.deletePublicKey(publicModel.getKeyLongId(id));
+        } catch (PGPException pgpException) {
+            pgpException.printStackTrace();
+        }
+        publicModel.deleteKey(id);
+        refreshPublicTable();
+
+        publicTable.repaint();
+        publicTable.revalidate();
+    }
+
+    private void deleteAndRefreshPrivate(String password, String id) {
+        try {
+            keyHandler.deletePrivateKey(password, privateModel.getKeyLongId(id));
+        } catch (PGPException pgpException) {
+            showMessage("Pogresna sifra!");
+            //pgpException.printStackTrace();
+        }
+        privateModel.deleteKey(id);
+        refreshPrivateTable();
+
+        privateTable.repaint();
+        privateTable.revalidate();
     }
 
     private void setPopupMenuListeners(JPopupMenu popupMenu, JTable table, KeyTableModel tableModel){
@@ -289,7 +326,7 @@ public class OpenPGP {
         KeyTableModel modelPublic = (KeyTableModel) publicTable.getModel();
         modelPublic.clearList();
 
-        PGPPublicKeyRingCollection pc = keyHandler.getPublicKeyRings();
+        PGPPublicKeyRingCollection pc = keyHandler.getPgpPublicKeyRings();
         pc.forEach(p -> {
             Key k = createKeyPublic(p);
             modelPublic.add(k);
@@ -300,7 +337,7 @@ public class OpenPGP {
         KeyTableModel modelPrivate = (KeyTableModel) privateTable.getModel();
         modelPrivate.clearList();
 
-        PGPSecretKeyRingCollection pc = keyHandler.getSecretKeyRings();
+        PGPSecretKeyRingCollection pc = keyHandler.getPgpSecretKeyRings();
         pc.forEach(p -> {
             Key k = createKeySecret(p);
             modelPrivate.add(k);
@@ -313,7 +350,7 @@ public class OpenPGP {
         String name = temp[0];
         String email = temp[1];
         String keyId = Long.toHexString(p.getPublicKey().getKeyID()).toUpperCase();
-        return new Key(name, email, keyId);
+        return new Key(name, email, keyId, p);
     }
 
     public Key createKeySecret(PGPSecretKeyRing p){
@@ -321,7 +358,7 @@ public class OpenPGP {
         String name = temp[0];
         String email = temp[1];
         String keyId = Long.toHexString(p.getSecretKey().getKeyID()).toUpperCase();
-        return new Key(name, email, keyId);
+        return new Key(name, email, keyId, p);
     }
 
 
