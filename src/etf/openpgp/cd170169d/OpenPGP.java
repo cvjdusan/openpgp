@@ -2,7 +2,6 @@ package etf.openpgp.cd170169d;
 
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.*;
-import org.bouncycastle.util.encoders.Hex;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -13,7 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -21,7 +20,7 @@ import java.security.NoSuchProviderException;
 
 
 public class OpenPGP {
-    private KeyHandler keyHandler;
+    private PGPKeyHandler keyHandler;
 
     private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -31,7 +30,7 @@ public class OpenPGP {
     private KeyTableModel publicModel, privateModel;
 
     public OpenPGP() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
-        keyHandler = new KeyHandler();
+        keyHandler = new PGPKeyHandler();
         initFrame();
     }
 
@@ -95,7 +94,12 @@ public class OpenPGP {
         JButton imp = new JButton("Uvezi kljuc");
 
         imp.addActionListener(click -> {
-
+            try {
+                importKeyRing();
+                refreshAllTables();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
 
         south.add(imp);
@@ -193,10 +197,27 @@ public class OpenPGP {
         privateTable.setComponentPopupMenu(popupMenuPrivate);
     }
 
+    private void importKeyRing() throws Exception {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Specify a file to save");
+
+        int userSelection = chooser.showSaveDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+//            String fingerprint = Hex.toHexString(publicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+            String withExtension = chooser.getSelectedFile().getAbsolutePath(); //+ ".asc";
+            FileInputStream file = new FileInputStream(withExtension);
+            keyHandler.decryptKeyFromFile(file);
+            file.close();
+            showMessage("Uspeh.");
+        }
+    }
+
     private void exportPublicKey(String id) throws IOException, PGPException {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Specify a file to save");
 
+        // TODO: create and change KeyTableModel getKeyRing()?
         PGPPublicKeyRing publicKeyRing = keyHandler.getPublicKeyRing(publicModel.getKeyLongId(id));
 
         int userSelection = chooser.showSaveDialog(frame);
@@ -342,13 +363,13 @@ public class OpenPGP {
 
         button.addActionListener(e -> {
             try {
-                if(name.getText().equals("") || email.getText().equals("") || password.getPassword().length == 0){
-                   showMessage("Greska. Postoje prazna polja.");
-                } else {
+                if(!name.getText().equals("") && !email.getText().equals("") && password.getPassword().length != 0){
                     keyHandler.createKeyRing(name.getText(), email.getText(), String.valueOf(password.getPassword()),
                             Integer.parseInt(listString1[op1[0]]), true);
                     refreshAllTables();
                     showMessage("Uspeh.");
+                } else {
+                    showMessage("Greska. Postoje prazna polja.");
                 }
             } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
                 noSuchAlgorithmException.printStackTrace();
