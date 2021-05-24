@@ -1,5 +1,7 @@
 package etf.openpgp.cd170169d;
 
+import org.bouncycastle.openpgp.PGPPublicKeyRing;
+
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;

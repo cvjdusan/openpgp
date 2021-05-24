@@ -1,6 +1,8 @@
 package etf.openpgp.cd170169d;
 
+import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.*;
+import org.bouncycastle.util.encoders.Hex;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -11,6 +13,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -140,8 +144,12 @@ public class OpenPGP {
         exportItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(frame,
-                        publicTable.getValueAt(publicTable.getSelectedRow(), 0).toString() + "EX");
+                String id = publicTable.getValueAt(publicTable.getSelectedRow(), 2).toString();
+                try {
+                    exportPublicKey(id);
+                } catch (IOException | PGPException ioException) {
+                    ioException.printStackTrace();
+                }
             }
         });
 
@@ -171,14 +179,58 @@ public class OpenPGP {
         exportItem1.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(frame,
-                        privateTable.getValueAt(privateTable.getSelectedRow(), 0).toString() + "EX");
+                String id = privateTable.getValueAt(privateTable.getSelectedRow(), 2).toString();
+                try {
+                    exportPrivateKey(id);
+                } catch (IOException | PGPException ioException) {
+                    ioException.printStackTrace();
+                }
             }
         });
 
         popupMenuPrivate.add(deleteItem1);
         popupMenuPrivate.add(exportItem1);
         privateTable.setComponentPopupMenu(popupMenuPrivate);
+    }
+
+    private void exportPublicKey(String id) throws IOException, PGPException {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Specify a file to save");
+
+        PGPPublicKeyRing publicKeyRing = keyHandler.getPublicKeyRing(publicModel.getKeyLongId(id));
+
+        int userSelection = chooser.showSaveDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+//            String fingerprint = Hex.toHexString(publicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+            String withExtension = chooser.getSelectedFile().getAbsolutePath() + ".asc";
+            FileOutputStream file = new FileOutputStream( withExtension );
+            ArmoredOutputStream output = new ArmoredOutputStream(file);
+            publicKeyRing.encode(output);
+            output.close();
+            file.close();
+            showMessage("Uspeh.");
+        }
+    }
+
+    private void exportPrivateKey(String id) throws IOException, PGPException {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Specify a file to save");
+
+        PGPSecretKeyRing privateKeyRing = keyHandler.getPrivateKeyRing(privateModel.getKeyLongId(id));
+
+        int userSelection = chooser.showSaveDialog(frame);
+
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+//            String fingerprint = Hex.toHexString(publicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+            String withExtension = chooser.getSelectedFile().getAbsolutePath() + ".asc";
+            FileOutputStream file = new FileOutputStream( withExtension );
+            ArmoredOutputStream output = new ArmoredOutputStream(file);
+            privateKeyRing.encode(output);
+            output.close();
+            file.close();
+            showMessage("Uspeh.");
+        }
     }
 
     private void deleteAndRefreshPublic(String id) {
@@ -238,8 +290,6 @@ public class OpenPGP {
             }
         });
     }
-
-
 
     private void initPanelGenerateKeys(){
 
@@ -360,7 +410,6 @@ public class OpenPGP {
         String keyId = Long.toHexString(p.getSecretKey().getKeyID()).toUpperCase();
         return new Key(name, email, keyId, p);
     }
-
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {

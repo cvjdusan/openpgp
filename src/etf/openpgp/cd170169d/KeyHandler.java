@@ -77,7 +77,15 @@ public class KeyHandler {
         PGPPublicKeyRing publicKeyRing = pgpKeyRingGenerator.generatePublicKeyRing();
         PGPSecretKeyRing secretKeyRing = pgpKeyRingGenerator.generateSecretKeyRing();
 
+        addToPublicKeyRings(publicKeyRing);
+        addToPrivateKeyRings(secretKeyRing);
+    }
+
+    public void addToPublicKeyRings(PGPPublicKeyRing publicKeyRing){
         pgpPublicKeyRings = JcaPGPPublicKeyRingCollection.addPublicKeyRing(pgpPublicKeyRings, publicKeyRing);
+    }
+
+    public void addToPrivateKeyRings(PGPSecretKeyRing secretKeyRing){
         pgpSecretKeyRings = JcaPGPSecretKeyRingCollection.addSecretKeyRing(pgpSecretKeyRings, secretKeyRing);
     }
 
@@ -87,6 +95,14 @@ public class KeyHandler {
 
     public PGPSecretKeyRingCollection getPgpSecretKeyRings() {
         return pgpSecretKeyRings;
+    }
+
+    public PGPPublicKeyRing getPublicKeyRing(Long keyLongId) throws PGPException {
+        return pgpPublicKeyRings.getPublicKeyRing(keyLongId);
+    }
+
+    public PGPSecretKeyRing getPrivateKeyRing(Long keyLongId) throws PGPException {
+        return pgpSecretKeyRings.getSecretKeyRing(keyLongId);
     }
 
     public void deletePublicKey(Long keyLongId) throws PGPException {
