@@ -13,8 +13,8 @@ import org.bouncycastle.crypto.generators.RSAKeyPairGenerator;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.bc.BcPGPObjectFactory;
-import org.bouncycastle.openpgp.jcajce.JcaPGPPublicKeyRingCollection;
-import org.bouncycastle.openpgp.jcajce.JcaPGPSecretKeyRingCollection;
+import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
+import org.bouncycastle.openpgp.PGPSecretKeyRingCollection;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
 import org.bouncycastle.openpgp.operator.bc.BcPBESecretKeyEncryptorBuilder;
@@ -34,8 +34,8 @@ public class PGPKeyHandler {
 
     public PGPKeyHandler() throws IOException, PGPException {
         Security.addProvider(new BouncyCastleProvider());
-        pgpPublicKeyRings = new JcaPGPPublicKeyRingCollection(new ArrayList<>());
-        pgpSecretKeyRings = new JcaPGPSecretKeyRingCollection(new ArrayList<>());
+        pgpPublicKeyRings = new PGPPublicKeyRingCollection(new ArrayList<>());
+        pgpSecretKeyRings = new PGPSecretKeyRingCollection(new ArrayList<>());
     }
 
 
@@ -87,11 +87,11 @@ public class PGPKeyHandler {
     }
 
     public void addToPublicKeyRings(PGPPublicKeyRing publicKeyRing){
-        pgpPublicKeyRings = JcaPGPPublicKeyRingCollection.addPublicKeyRing(pgpPublicKeyRings, publicKeyRing);
+        pgpPublicKeyRings = PGPPublicKeyRingCollection.addPublicKeyRing(pgpPublicKeyRings, publicKeyRing);
     }
 
     public void addToPrivateKeyRings(PGPSecretKeyRing secretKeyRing){
-        pgpSecretKeyRings = JcaPGPSecretKeyRingCollection.addSecretKeyRing(pgpSecretKeyRings, secretKeyRing);
+        pgpSecretKeyRings = PGPSecretKeyRingCollection.addSecretKeyRing(pgpSecretKeyRings, secretKeyRing);
     }
 
     public PGPPublicKeyRingCollection getPgpPublicKeyRings() {
@@ -134,7 +134,7 @@ public class PGPKeyHandler {
 
     public void deletePublicKey(Long keyLongId) throws PGPException {
         PGPPublicKeyRing pgpPublicKeyRing = pgpPublicKeyRings.getPublicKeyRing(keyLongId);
-        pgpPublicKeyRings = JcaPGPPublicKeyRingCollection.removePublicKeyRing(pgpPublicKeyRings, pgpPublicKeyRing);
+        pgpPublicKeyRings = PGPPublicKeyRingCollection.removePublicKeyRing(pgpPublicKeyRings, pgpPublicKeyRing);
         String fp = Hex.toHexString(pgpPublicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
 
      //   File f = new File("src/etf/openpgp/cd170169d/openpgp/keys/public/" + fp + ".asc");
@@ -148,7 +148,7 @@ public class PGPKeyHandler {
 
         pgpSecretKeyRing.getSecretKey().extractPrivateKey(decryptorBuilder.build(password.toCharArray()));
 
-        pgpSecretKeyRings = JcaPGPSecretKeyRingCollection.removeSecretKeyRing(pgpSecretKeyRings, pgpSecretKeyRing);
+        pgpSecretKeyRings = PGPSecretKeyRingCollection.removeSecretKeyRing(pgpSecretKeyRings, pgpSecretKeyRing);
 
         String fp = Hex.toHexString(pgpSecretKeyRing.getPublicKey().getFingerprint()).toUpperCase();
         //   File f = new File("src/etf/openpgp/cd170169d/openpgp/keys/public/" + fp + ".asc");

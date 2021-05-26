@@ -5,6 +5,8 @@ import org.bouncycastle.openpgp.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import java.awt.*;
@@ -13,10 +15,12 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.util.Scanner;
 
 
 public class OpenPGP {
@@ -24,7 +28,7 @@ public class OpenPGP {
 
     private JFrame frame;
     private JTabbedPane tabbedPane;
-    private JPanel panelShowKeys, panelGenerateKeys, panelSendMessage;
+    private JPanel panelShowKeys, panelGenerateKeys, panelMessage;
 
     private JTable publicTable, privateTable;
     private KeyTableModel publicModel, privateModel;
@@ -55,16 +59,134 @@ public class OpenPGP {
         frame.setVisible(true);
     }
 
-    private void initPanels(){
+    private void initPanels() throws IOException {
         tabbedPane = new JTabbedPane();
 
         initPanelGenerateKeys();
         initPanelShowKeys();
+        initPanelMessage();
 
         tabbedPane.add(panelShowKeys, "Prikaz kljuceva");
         tabbedPane.add(panelGenerateKeys, "Generisanje kljuceva");
-        tabbedPane.add(panelSendMessage, "Poruke");
+        tabbedPane.add(panelMessage, "Poruke");
     }
+
+    private void initPanelMessage() throws IOException {
+        panelMessage = new JPanel(new BorderLayout());
+        JPanel north = new JPanel(new FlowLayout());
+        JPanel center = new JPanel(new BorderLayout());
+
+        JButton receive = new JButton("Prijem");
+        JButton send = new JButton("Slanje");
+        JButton enterMsg = new JButton("Izaberi fajl");
+
+        JCheckBox enc = new JCheckBox("Enkripcija");
+        enc.setBounds(100,100, 50,50);
+        JCheckBox sign = new JCheckBox("Potpis");
+        sign.setBounds(100,150, 50,50);
+        JCheckBox comp = new JCheckBox("Kompresija");
+        comp.setBounds(100,100, 50,50);
+        JCheckBox radix64 = new JCheckBox("Radix64");
+        radix64.setBounds(100,150, 50,50);
+
+        StringBuilder msg = new StringBuilder();
+        enterMsg.addActionListener(l -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Specify a file...");
+            int userSelection = chooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                String withExtension = chooser.getSelectedFile().getAbsolutePath(); //+ ".asc";
+                FileInputStream file = null;
+                try {
+                    file = new FileInputStream(withExtension);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                }
+                Scanner myReader = new Scanner(file);
+                while (myReader.hasNextLine()) {
+                    String data = myReader.nextLine();
+                    msg.append("\n"+data);
+                   // System.out.println(data);
+                }
+                myReader.close();
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                JOptionPane.showMessageDialog(frame, msg);
+            }
+        });
+
+
+        JPanel encPanel = new JPanel(new FlowLayout());
+        encPanel.add(new JLabel("Izaberite parametre enkripcije: "));
+        encPanel.setVisible(false);
+        enc.addChangeListener(arg0 -> encPanel.setVisible(enc.isSelected()));
+
+        String[] items = { "Item 1 dasdasd asd", "Item 2", "Item 3", "Item 4" };
+        final JList theList = new JList(items);
+        theList.setVisibleRowCount(5);
+        JScrollPane scrollPane = new JScrollPane(theList);
+
+        String[] listString1 = { "3DES", "AES128"};
+        JComboBox firstList = new JComboBox(listString1);
+      //  firstList.setPreferredSize(new Dimension(40, 40));
+        firstList.setSelectedIndex(0);
+
+        final int[] op1 = new int[1];
+
+        firstList.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                op1[0] = firstList.getSelectedIndex();
+            }
+        });
+
+        op1[0] = firstList.getSelectedIndex();
+        encPanel.add(firstList);
+        encPanel.add(scrollPane);
+
+        JPanel signPanel = new JPanel(new FlowLayout());
+        signPanel.add(new JLabel("Izaberite parametre potpisivanja: "));
+
+        String[] listString2 = { "3DES", "AES128"};
+        JComboBox firstList2 = new JComboBox(listString2);
+        //  firstList.setPreferredSize(new Dimension(40, 40));
+        firstList2.setSelectedIndex(0);
+
+        final int[] op2 = new int[1];
+
+        firstList2.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                op2[0] = firstList2.getSelectedIndex();
+            }
+        });
+
+        op2[0] = firstList2.getSelectedIndex();
+        encPanel.add(firstList2);
+
+        signPanel.add(firstList2);
+        signPanel.setVisible(false);
+        sign.addChangeListener(arg0 -> signPanel.setVisible(sign.isSelected()));
+
+        north.add(enterMsg);
+        north.add(enc);
+        north.add(sign);
+        north.add(comp);
+        north.add(radix64);
+        north.add(send);
+
+        encPanel.setBorder(new EmptyBorder(50, 10, 10, 10));
+        signPanel.setBorder(new EmptyBorder(10, 10, 150, 10));
+        center.add(encPanel, BorderLayout.NORTH);
+        center.add(signPanel, BorderLayout.SOUTH);
+
+        panelMessage.add(north, BorderLayout.NORTH);
+        panelMessage.add(center, BorderLayout.CENTER);
+   }
 
     private void initPanelShowKeys() {
         JPanel p1 = new JPanel(new BorderLayout(5,5));
