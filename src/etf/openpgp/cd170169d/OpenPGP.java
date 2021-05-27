@@ -36,6 +36,7 @@ public class OpenPGP {
 
     // JList za izbor javnih kljuceva kod slanja poruka
     private JList listPublic;
+    private JComboBox listPrivate;
 
     public OpenPGP() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
         keyHandler = new PGPKeyHandler();
@@ -141,17 +142,12 @@ public class OpenPGP {
             }
         });
 
-
-
         String[] listString1 = { "3DES", "AES128"};
         JComboBox algList = new JComboBox(listString1);
       //  firstList.setPreferredSize(new Dimension(40, 40));
         algList.setSelectedIndex(0);
-
         final int[] alg = new int[1];
-
         algList.addActionListener(e -> alg[0] = algList.getSelectedIndex());
-
         alg[0] = algList.getSelectedIndex();
         encPanel.add(algList);
         encPanel.add(scrollPane);
@@ -159,26 +155,23 @@ public class OpenPGP {
         JPanel signPanel = new JPanel(new FlowLayout());
         signPanel.add(new JLabel("Izaberite parametre potpisivanja: "));
 
-        String[] listString2 = { "3DES", "AES128"};
-        JComboBox firstList2 = new JComboBox(listString2);
-        //  firstList.setPreferredSize(new Dimension(40, 40));
-        firstList2.setSelectedIndex(0);
-
+        // TODO PRVO UCITAVANJE
+        listPrivate = new JComboBox();
+      //  listPrivate.setSelectedIndex(0);
         final int[] op2 = new int[1];
-
-        firstList2.addActionListener(new ActionListener() {
+        listPrivate.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                op2[0] = firstList2.getSelectedIndex();
+                op2[0] = listPrivate.getSelectedIndex();
             }
         });
 
-        op2[0] = firstList2.getSelectedIndex();
-        encPanel.add(firstList2);
-
-        signPanel.add(firstList2);
+        signPanel.add(listPrivate);
         signPanel.setVisible(false);
-        sign.addChangeListener(arg0 -> signPanel.setVisible(sign.isSelected()));
+        sign.addChangeListener(arg0 ->
+        {
+            signPanel.setVisible(sign.isSelected());
+        });
 
         north.add(enterMsg);
         north.add(enc);
@@ -550,13 +543,16 @@ public class OpenPGP {
     public void refreshPrivateTable(){
         KeyTableModel modelPrivate = (KeyTableModel) privateTable.getModel();
         modelPrivate.clearList();
-
+        ArrayList<String> list = new ArrayList<>();
+        
         PGPSecretKeyRingCollection pc = keyHandler.getPgpSecretKeyRings();
         pc.forEach(p -> {
             Key k = createKeySecret(p);
             modelPrivate.add(k);
+            list.add(k.getName() + " " + k.getEmail() + " " + k.getId());
         });
 
+        listPrivate.setModel(new DefaultComboBoxModel(list.toArray()));
     }
 
     public Key createKeyPublic(PGPPublicKeyRing p){
