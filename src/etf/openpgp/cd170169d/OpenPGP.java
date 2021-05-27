@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 
@@ -32,6 +33,9 @@ public class OpenPGP {
 
     private JTable publicTable, privateTable;
     private KeyTableModel publicModel, privateModel;
+
+    // JList za izbor javnih kljuceva kod slanja poruka
+    private JList listPublic;
 
     public OpenPGP() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
         keyHandler = new PGPKeyHandler();
@@ -123,29 +127,33 @@ public class OpenPGP {
         JPanel encPanel = new JPanel(new FlowLayout());
         encPanel.add(new JLabel("Izaberite parametre enkripcije: "));
         encPanel.setVisible(false);
-        enc.addChangeListener(arg0 -> encPanel.setVisible(enc.isSelected()));
 
-        String[] items = { "Item 1 dasdasd asd", "Item 2", "Item 3", "Item 4" };
-        final JList theList = new JList(items);
-        theList.setVisibleRowCount(5);
-        JScrollPane scrollPane = new JScrollPane(theList);
+        // TODO KAD VEC POSTOJE KLJUCEVI STA SE DESAVA???
+        listPublic = new JList();
+        listPublic.setVisibleRowCount(5);
+        JScrollPane scrollPane = new JScrollPane(listPublic);
 
-        String[] listString1 = { "3DES", "AES128"};
-        JComboBox firstList = new JComboBox(listString1);
-      //  firstList.setPreferredSize(new Dimension(40, 40));
-        firstList.setSelectedIndex(0);
-
-        final int[] op1 = new int[1];
-
-        firstList.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                op1[0] = firstList.getSelectedIndex();
+        enc.addChangeListener(arg0 -> {
+            encPanel.setVisible(enc.isSelected());
+            if (enc.isSelected()) {
+                scrollPane.repaint();
+                scrollPane.revalidate();
             }
         });
 
-        op1[0] = firstList.getSelectedIndex();
-        encPanel.add(firstList);
+
+
+        String[] listString1 = { "3DES", "AES128"};
+        JComboBox algList = new JComboBox(listString1);
+      //  firstList.setPreferredSize(new Dimension(40, 40));
+        algList.setSelectedIndex(0);
+
+        final int[] alg = new int[1];
+
+        algList.addActionListener(e -> alg[0] = algList.getSelectedIndex());
+
+        alg[0] = algList.getSelectedIndex();
+        encPanel.add(algList);
         encPanel.add(scrollPane);
 
         JPanel signPanel = new JPanel(new FlowLayout());
@@ -183,6 +191,13 @@ public class OpenPGP {
         signPanel.setBorder(new EmptyBorder(10, 10, 150, 10));
         center.add(encPanel, BorderLayout.NORTH);
         center.add(signPanel, BorderLayout.SOUTH);
+
+        send.addActionListener(l -> {
+            ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
+            lis.forEach(elem -> {
+                //showMessage(elem.split(" ")[2]);
+            });
+        });
 
         panelMessage.add(north, BorderLayout.NORTH);
         panelMessage.add(center, BorderLayout.CENTER);
@@ -520,10 +535,16 @@ public class OpenPGP {
         modelPublic.clearList();
 
         PGPPublicKeyRingCollection pc = keyHandler.getPgpPublicKeyRings();
+        DefaultListModel model = new DefaultListModel();
+
         pc.forEach(p -> {
             Key k = createKeyPublic(p);
             modelPublic.add(k);
+            model.addElement(k.getName() + " " + k.getEmail() + " " + k.getId());
         });
+
+
+        listPublic.setModel(model);
     }
 
     public void refreshPrivateTable(){

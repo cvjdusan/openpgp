@@ -79,4 +79,14 @@ public class KeyTableModel extends AbstractTableModel {
     public void deleteKey(String id1) {
         keys.removeIf( id -> id.equals(id1));
     }
+
+    public ArrayList<String> getKeysString() {
+        ArrayList<String> s = new ArrayList<>();
+
+        keys.forEach(k -> {
+            s.add(k.getName() + " " + k.getEmail() + " " + k.getId());
+        });
+
+        return s;
+    }
 }
