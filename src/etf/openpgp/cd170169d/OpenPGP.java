@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -186,11 +187,56 @@ public class OpenPGP {
         center.add(signPanel, BorderLayout.SOUTH);
 
         send.addActionListener(l -> {
-            ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
-            lis.forEach(elem -> {
-                //showMessage(elem.split(" ")[2]);
-            });
+            PGPSecretKeyRing s = null;
+            ArrayList<PGPPublicKeyRing> list = new ArrayList<>();
+            if(enc.isSelected()) {
+                ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
+                lis.forEach(elem -> {
+                    //showMessage(elem.split(" ")[2]
+                    String id = elem.split(" ")[2];
+                    try {
+                        list.add(keyHandler.getPublicKeyRing(publicModel.getKeyLongId(id)));
+                    } catch (PGPException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+
+            if(sign.isSelected()){
+                String id = listPrivate.getSelectedItem().toString().split(" ")[2];
+                try {
+                    s = keyHandler.getPrivateKeyRing(privateModel.getKeyLongId(id));
+                } catch (PGPException e) {
+                    e.printStackTrace();
+                }
+                // s = listPrivate.
+            }
+
+            JFileChooser chooser2 = new JFileChooser();
+            chooser2.setDialogTitle("Specify a file...");
+            int userSelection = chooser2.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                String withExtension = chooser2.getSelectedFile().getAbsolutePath() + ".asc";
+                try {
+                    FileOutputStream file = new FileOutputStream(withExtension);
+
+                    keyHandler.sendMessage(msg.toString(), enc.isSelected(), sign.isSelected(), comp.isSelected(), radix64.isSelected(), alg[0], "123", file,
+                            s, list);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException e) {
+                    e.printStackTrace();
+                } catch (SignatureException e) {
+                    e.printStackTrace();
+                } catch (PGPException e) {
+                    e.printStackTrace();
+                }
+            }
         });
+
 
         panelMessage.add(north, BorderLayout.NORTH);
         panelMessage.add(center, BorderLayout.CENTER);
@@ -544,7 +590,7 @@ public class OpenPGP {
         KeyTableModel modelPrivate = (KeyTableModel) privateTable.getModel();
         modelPrivate.clearList();
         ArrayList<String> list = new ArrayList<>();
-        
+
         PGPSecretKeyRingCollection pc = keyHandler.getPgpSecretKeyRings();
         pc.forEach(p -> {
             Key k = createKeySecret(p);
