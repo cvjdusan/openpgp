@@ -5,8 +5,6 @@ import org.bouncycastle.openpgp.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import java.awt.*;
@@ -14,10 +12,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SignatureException;
@@ -26,7 +21,7 @@ import java.util.Scanner;
 
 
 public class OpenPGP {
-    private PGPKeyHandler keyHandler;
+    private PGPHandler keyHandler;
 
     private JFrame frame;
     private JTabbedPane tabbedPane;
@@ -39,9 +34,10 @@ public class OpenPGP {
     private JList listPublic;
     private JComboBox listPrivate;
 
-    public OpenPGP() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
-        keyHandler = new PGPKeyHandler();
+    public OpenPGP() throws Exception {
+        keyHandler = new PGPHandler();
         initFrame();
+        refreshAllTables(); // Prvi put, ako ima kljuceva u folderima
     }
 
     private void initFrame() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
@@ -82,6 +78,7 @@ public class OpenPGP {
         JPanel north = new JPanel(new FlowLayout());
         JPanel center = new JPanel(new BorderLayout());
 
+
         JButton receive = new JButton("Prijem");
         JButton send = new JButton("Slanje");
         JButton enterMsg = new JButton("Izaberi fajl");
@@ -112,7 +109,7 @@ public class OpenPGP {
                 Scanner myReader = new Scanner(file);
                 while (myReader.hasNextLine()) {
                     String data = myReader.nextLine();
-                    msg.append("\n"+data);
+                    msg.append(data + "\n");
                    // System.out.println(data);
                 }
                 myReader.close();
@@ -130,7 +127,6 @@ public class OpenPGP {
         encPanel.add(new JLabel("Izaberite parametre enkripcije: "));
         encPanel.setVisible(false);
 
-        // TODO KAD VEC POSTOJE KLJUCEVI STA SE DESAVA???
         listPublic = new JList();
         listPublic.setVisibleRowCount(5);
         JScrollPane scrollPane = new JScrollPane(listPublic);
@@ -156,7 +152,6 @@ public class OpenPGP {
         JPanel signPanel = new JPanel(new FlowLayout());
         signPanel.add(new JLabel("Izaberite parametre potpisivanja: "));
 
-        // TODO PRVO UCITAVANJE
         listPrivate = new JComboBox();
       //  listPrivate.setSelectedIndex(0);
         final int[] op2 = new int[1];
@@ -168,6 +163,10 @@ public class OpenPGP {
         });
 
         signPanel.add(listPrivate);
+        JTextField passw = new JTextField();
+        signPanel.add(new JLabel("Sifra: "));
+        passw.setPreferredSize(new Dimension(100, 30));
+        signPanel.add(passw);
         signPanel.setVisible(false);
         sign.addChangeListener(arg0 ->
         {
@@ -189,6 +188,7 @@ public class OpenPGP {
         send.addActionListener(l -> {
             PGPSecretKeyRing s = null;
             ArrayList<PGPPublicKeyRing> list = new ArrayList<>();
+            String password = "";
             if(enc.isSelected()) {
                 ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
                 lis.forEach(elem -> {
@@ -209,6 +209,7 @@ public class OpenPGP {
                 } catch (PGPException e) {
                     e.printStackTrace();
                 }
+                password = passw.getText();
                 // s = listPrivate.
             }
 
@@ -217,11 +218,10 @@ public class OpenPGP {
             int userSelection = chooser2.showSaveDialog(frame);
 
             if (userSelection == JFileChooser.APPROVE_OPTION) {
-                String withExtension = chooser2.getSelectedFile().getAbsolutePath() + ".asc";
+                String withExtension = chooser2.getSelectedFile().getAbsolutePath() + ".pgp";
                 try {
                     FileOutputStream file = new FileOutputStream(withExtension);
-
-                    keyHandler.sendMessage(msg.toString(), enc.isSelected(), sign.isSelected(), comp.isSelected(), radix64.isSelected(), alg[0], "123", file,
+                    keyHandler.sendMessage(msg.toString(), enc.isSelected(), sign.isSelected(), comp.isSelected(), radix64.isSelected(), alg[0], password, file,
                             s, list);
                 } catch (FileNotFoundException e) {
                     e.printStackTrace();
@@ -237,10 +237,63 @@ public class OpenPGP {
             }
         });
 
+        north.add(receive);
+        receive.addActionListener(l -> {
+            JFileChooser chooser3 = new JFileChooser();
+            chooser3.setDialogTitle("Specify a file...");
+            int userSelection = chooser3.showSaveDialog(frame);
+            if (userSelection == JFileChooser.APPROVE_OPTION){
+                File f = new File(chooser3.getSelectedFile().getAbsolutePath());
+                try {
+                    Message m = keyHandler.receive(f);
+                    showSaveFilePane(m);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (PGPException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
 
         panelMessage.add(north, BorderLayout.NORTH);
         panelMessage.add(center, BorderLayout.CENTER);
    }
+
+    private void showSaveFilePane(Message m) throws IOException {
+        JPanel panel = new JPanel(new BorderLayout());
+        JLabel label = new JLabel();
+        JLabel ver = new JLabel();
+
+        label.setText("<html> Potpis: " + m.sign + "<br/> " +
+                "Invalidni kljucevi: " + m.keysNotFound.toString() + "<br/>" + "Verifikovano: " + m.isVerified + "<br/></html>");
+
+
+        ver.setText("Lista ver: " + m.verifiers.toString());
+
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(ver, BorderLayout.SOUTH);
+        String[] options = new String[]{"Sacuvaj", "Cancel"};
+        int option = JOptionPane.showOptionDialog(null, panel, "The title",
+                JOptionPane.NO_OPTION, JOptionPane.PLAIN_MESSAGE,
+                null, options, options[1]);
+
+        if(option == 0){
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Specify a file to save");
+
+            int userSelection = chooser.showSaveDialog(frame);
+
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+//            String fingerprint = Hex.toHexString(publicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
+                String withExtension = chooser.getSelectedFile().getAbsolutePath() + ".txt";
+                FileOutputStream file = new FileOutputStream( withExtension );
+                file.write(m.msg.getBytes());
+                file.close();
+                showMessage("Uspeh.");
+            }
+        }
+    }
 
     private void initPanelShowKeys() {
         JPanel p1 = new JPanel(new BorderLayout(5,5));
@@ -623,7 +676,7 @@ public class OpenPGP {
             public void run() {
                 try {
                     new OpenPGP();
-                } catch (NoSuchAlgorithmException | PGPException | NoSuchProviderException | IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
             }

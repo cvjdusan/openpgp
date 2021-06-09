@@ -42,4 +42,8 @@ public class Key {
     public void setId(String id) {
         this.id = id;
     }
+
+    public PGPKeyRing getRing() {
+        return ring;
+    }
 }
