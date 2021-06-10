@@ -26,6 +26,11 @@ import javax.crypto.KeyGenerator;
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicComboBoxRenderer;
 
+/**
+ * Klasa koja upravlja bouncy castle metodama (kljucevi, enkriptovanje, dekriptovanje)
+ *
+ */
+
 public class PGPHandler {
 
     class ItemRenderer extends BasicComboBoxRenderer {
@@ -64,6 +69,12 @@ public class PGPHandler {
         importFromDir();
     }
 
+    /**
+     * Importovanje kljuceva iz fajlova prilikom pokrenja aplikacije
+     *
+     * @throws Exception
+     */
+
     public void importFromDir() throws Exception {
         File pub = new File(stringPublicDir);
         File priv = new File(stringPrivateDir);
@@ -87,7 +98,21 @@ public class PGPHandler {
 
     }
 
-    public void createKeyRing(String name, String email, String password, int keySize, boolean encrypt) throws NoSuchAlgorithmException, PGPException, NoSuchProviderException {
+    /**
+     * Kreiranje key ringova
+     *
+     * @param name
+     * @param email
+     * @param password
+     * @param keySize
+     * @param encrypt
+     * @throws NoSuchAlgorithmException
+     * @throws PGPException
+     * @throws NoSuchProviderException
+     */
+
+    public void createKeyRing(String name, String email, String password, int keySize, boolean encrypt)
+            throws NoSuchAlgorithmException, PGPException, NoSuchProviderException {
 
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA_ALG, provider);
         keyPairGenerator.initialize(keySize);
@@ -118,7 +143,7 @@ public class PGPHandler {
                 keyEncryptor
         );
 
-        // da li treba???????????
+        // za sad uvek true
         if (encrypt) {
             KeyPairGenerator keyPairGenerator1 = KeyPairGenerator.getInstance(RSA_ALG, provider);
             keyPairGenerator1.initialize(keySize);
@@ -137,6 +162,12 @@ public class PGPHandler {
         savePrivate(secretKeyRing);
     }
 
+    /**
+     * Cuvanje privatnog kljuca u fajl
+     *
+     * @param ring
+     */
+
     private void savePrivate(PGPSecretKeyRing ring) {
         String name = Hex.toHexString(ring.getPublicKey().getFingerprint()).toUpperCase();
         File file = new File(stringPrivateDir + name + ".asc");
@@ -152,6 +183,12 @@ public class PGPHandler {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Cuvanje javnog kljuca u fajl
+     *
+     * @param ring
+     */
 
     private void savePublic(PGPPublicKeyRing ring) {
         String name = Hex.toHexString(ring.getPublicKey().getFingerprint()).toUpperCase();
@@ -169,29 +206,76 @@ public class PGPHandler {
         }
     }
 
+    /**
+     * Dodavanje u listu javnih kljuceva
+     *
+     * @param publicKeyRing
+     */
+
     public void addToPublicKeyRings(PGPPublicKeyRing publicKeyRing) {
         pgpPublicKeyRings = PGPPublicKeyRingCollection.addPublicKeyRing(pgpPublicKeyRings, publicKeyRing);
     }
+
+    /**
+     * Dodavanje u listu privatnih kljuceva
+     *
+     * @param secretKeyRing
+     */
 
     public void addToPrivateKeyRings(PGPSecretKeyRing secretKeyRing) {
         pgpSecretKeyRings = PGPSecretKeyRingCollection.addSecretKeyRing(pgpSecretKeyRings, secretKeyRing);
     }
 
+    /**
+     * Dohvatanje liste javnih kljuceva
+     *
+     * @return
+     */
+
     public PGPPublicKeyRingCollection getPgpPublicKeyRings() {
         return pgpPublicKeyRings;
     }
+
+    /**
+     * Dohvatanje liste privatnih kljuceva
+     *
+     * @return
+     */
 
     public PGPSecretKeyRingCollection getPgpSecretKeyRings() {
         return pgpSecretKeyRings;
     }
 
+    /**
+     * Dohvatanje javnog kljuca na osnovu long id-a
+     *
+     * @param keyLongId
+     * @return
+     * @throws PGPException
+     */
+
     public PGPPublicKeyRing getPublicKeyRing(Long keyLongId) throws PGPException {
         return pgpPublicKeyRings.getPublicKeyRing(keyLongId);
     }
 
+    /**
+     * Dohvatanje privatnog kljuca na osnovu long id-a
+     *
+     * @param keyLongId
+     * @return
+     * @throws PGPException
+     */
+
     public PGPSecretKeyRing getPrivateKeyRing(Long keyLongId) throws PGPException {
         return pgpSecretKeyRings.getSecretKeyRing(keyLongId);
     }
+
+    /**
+     * Import jednog kljuca iz fajla
+     *
+     * @param in
+     * @throws Exception
+     */
 
     public void decryptKeyFromFile(InputStream in) throws Exception {
         BcPGPObjectFactory pgpF = new BcPGPObjectFactory(PGPUtil.getDecoderStream(in));
@@ -214,6 +298,13 @@ public class PGPHandler {
         }
 
     }
+
+    /**
+     * Import vise kljuceva iz fajla
+     *
+     * @param in
+     * @throws Exception
+     */
 
     public void importKeyFromFiles(InputStream in) throws Exception{
         BcPGPObjectFactory pgpF = new BcPGPObjectFactory(PGPUtil.getDecoderStream(in));
@@ -240,6 +331,13 @@ public class PGPHandler {
         }
     }
 
+    /**
+     * Brisanje javnog kljuca
+     *
+     * @param keyLongId
+     * @throws PGPException
+     */
+
     public void deletePublicKey(Long keyLongId) throws PGPException {
         PGPPublicKeyRing pgpPublicKeyRing = pgpPublicKeyRings.getPublicKeyRing(keyLongId);
         pgpPublicKeyRings = PGPPublicKeyRingCollection.removePublicKeyRing(pgpPublicKeyRings, pgpPublicKeyRing);
@@ -248,6 +346,14 @@ public class PGPHandler {
         File f = new File(stringPublicDir + name + ".asc");
         f.delete();
     }
+
+    /**
+     * Brisanje privatnog kljuca
+     *
+     * @param password
+     * @param keyLongId
+     * @throws PGPException
+     */
 
     public void deletePrivateKey(String password, Long keyLongId) throws PGPException {
         PGPSecretKeyRing pgpSecretKeyRing = pgpSecretKeyRings.getSecretKeyRing(keyLongId);
@@ -263,6 +369,15 @@ public class PGPHandler {
         f.delete();
     }
 
+    /**
+     * Primanje poruke i njeno dekriptivanje, dohvatanje potpisa, provere integriteta...
+     *
+     * @param f
+     * @return
+     * @throws IOException
+     * @throws PGPException
+     */
+
     public Message receive(File f) throws IOException, PGPException {
         byte[] stream = null;
 
@@ -270,13 +385,15 @@ public class PGPHandler {
         BcPGPObjectFactory factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(file));
         Object object = null;
         String msg = null;
-        PGPOnePassSignatureList allSigns = null;
+
 
         List<String> verifiers = new ArrayList<>();
         List<Long> invalidKeys = new ArrayList<>();
 
         boolean verified = true;
         boolean sign = false;
+
+        PGPOnePassSignatureList allSigns = null;
 
         while(true){
 
@@ -370,19 +487,22 @@ public class PGPHandler {
                         if (!it.hasNext())
                             throw new PGPException("Nema subkey za dekripciju!");
 
-                        PGPSecretKey secretSubKey = it.next();
+                        PGPSecretKey secretKey = it.next();
 
                         try {
-                            PGPPrivateKey privateKey = secretSubKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().build(password.toCharArray()));
+                            PGPPrivateKey privateKey = secretKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().build(password.toCharArray()));
                             InputStream plain = selectedData.getDataStream(new BcPublicKeyDataDecryptorFactory(privateKey));
                             factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(plain));
+
+                            if (selectedData.isIntegrityProtected() &&
+                                    selectedData.verify() == false) {
+                                throw new PGPException("Data integrity check greska!");
+                            }
+
                         } catch (PGPException e) {
                             throw new PGPException("Pogresna sifra!");
                         }
 
-                        if (selectedData.isIntegrityProtected() && !selectedData.verify()) {
-                            throw new PGPException("Data integrity check greska!");
-                        }
                     }
                 } else
                     throw new PGPException("Nije nadjen privatni kljuc.");
@@ -439,14 +559,14 @@ public class PGPHandler {
 
             if (object instanceof PGPSignatureList) {
                 System.out.println("USAO U SIGLIST");
-                PGPSignatureList signatureList = (PGPSignatureList) object;
+                PGPSignatureList signs = (PGPSignatureList) object;
 
-                for (int i = 0; i < signatureList.size(); i++) {
-                    PGPSignature signature = signatureList.get(i);
+                for (int i = 0; i < signs.size(); i++) {
+                    PGPSignature signature = signs.get(i);
                     if (allSigns != null){
                         int position = allSigns.size() - i - 1;
-                        PGPOnePassSignature onePassSignature = allSigns.get(position);
-                        if (invalidKeys.contains(signature.getKeyID()) || !onePassSignature.verify(signature)) {
+                        PGPOnePassSignature ops = allSigns.get(position);
+                        if (invalidKeys.contains(signature.getKeyID()) || !ops.verify(signature)) {
                             verified = false;
                         } else {
                             PGPPublicKeyRing ring = pgpPublicKeyRings.getPublicKeyRing(signature.getKeyID());
@@ -476,19 +596,25 @@ public class PGPHandler {
             }
         }
 
-
-        System.out.println(msg);
-        System.out.println(verifiers.toString());
-        System.out.println(invalidKeys.toString());
-        System.out.println(verified);
-        System.out.println(sign);
+        if(!verified)
+            throw new PGPException("Potpis nije validan ili nemate javni kljuc!");
 
         Message pgpMessage = new Message(msg, verifiers, invalidKeys, verified, sign);
-
 
         return pgpMessage;
     }
 
+    /**
+     * Enkriptovanje streama
+     *
+     * @param alg
+     * @param publicKeys
+     * @param stream
+     * @return
+     * @throws NoSuchAlgorithmException
+     * @throws PGPException
+     * @throws IOException
+     */
 
     public byte [] encrypt(int alg, List<PGPPublicKeyRing> publicKeys, byte [] stream) throws NoSuchAlgorithmException, PGPException, IOException {
 
@@ -549,6 +675,14 @@ public class PGPHandler {
             return stream;
     }
 
+    /**
+     * Kompresovanje poruke
+     *
+     * @param stream
+     * @return
+     * @throws IOException
+     */
+
     public byte[] compress(byte [] stream) throws IOException {
         ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
         PGPCompressedDataGenerator compressedDataGenerator = new PGPCompressedDataGenerator(CompressionAlgorithmTags.ZIP);
@@ -564,6 +698,17 @@ public class PGPHandler {
 
         return stream;
     }
+
+    /**
+     * Potpisivanje poruke
+     *
+     * @param secretKey
+     * @param password
+     * @param stream
+     * @return
+     * @throws PGPException
+     * @throws IOException
+     */
 
     private byte [] sign(PGPSecretKeyRing secretKey, String password, byte[] stream) throws PGPException, IOException {
 
@@ -606,6 +751,14 @@ public class PGPHandler {
         return stream;
     }
 
+    /**
+     * Stvaranje literalnog paketa
+     *
+     * @param stream
+     * @return
+     * @throws IOException
+     */
+
     public byte[] myWriteToFileLiteralData(byte [] stream) throws IOException {
         PGPLiteralDataGenerator literalDataGenerator = new PGPLiteralDataGenerator();
         ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
@@ -620,6 +773,26 @@ public class PGPHandler {
         fileStream.close();
         return stream;
     }
+
+    /**
+     * Slanje poruke i njego potpisivivanje, enkriptovanje, kompresija, radix u zavisnosti od
+     * zelje korisnika
+     *
+     * @param text
+     * @param enc
+     * @param sign
+     * @param comp
+     * @param radix
+     * @param alg
+     * @param password
+     * @param file
+     * @param secretKey
+     * @param publicKeys
+     * @throws NoSuchAlgorithmException
+     * @throws PGPException
+     * @throws IOException
+     * @throws SignatureException
+     */
 
     public void sendMessage(String text, boolean enc, boolean sign, boolean comp, boolean radix,
                             int alg, String password, FileOutputStream file, PGPSecretKeyRing secretKey,

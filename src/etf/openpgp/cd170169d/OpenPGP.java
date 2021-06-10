@@ -19,6 +19,9 @@ import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+/**
+ * Glavna klasa aplikacije
+ */
 
 public class OpenPGP {
     private PGPHandler keyHandler;
@@ -40,6 +43,14 @@ public class OpenPGP {
         refreshAllTables(); // Prvi put, ako ima kljuceva u folderima
     }
 
+    /**
+     * Metoda koja inicijalizuje glavni frejm aplikacije
+     *
+     * @throws NoSuchAlgorithmException
+     * @throws PGPException
+     * @throws NoSuchProviderException
+     * @throws IOException
+     */
     private void initFrame() throws NoSuchAlgorithmException, PGPException, NoSuchProviderException, IOException {
         frame = new JFrame();
         frame.setTitle("openPGP");
@@ -61,6 +72,12 @@ public class OpenPGP {
         frame.setVisible(true);
     }
 
+    /**
+     * Metoda koja dodaje glavne panele frejmu
+     *
+     * @throws IOException
+     */
+
     private void initPanels() throws IOException {
         tabbedPane = new JTabbedPane();
 
@@ -73,6 +90,11 @@ public class OpenPGP {
         tabbedPane.add(panelMessage, "Poruke");
     }
 
+    /**
+     * Metoda koja inicijalizuje panel za slanje i prijem poruka
+     *
+     * @throws IOException
+     */
     private void initPanelMessage() throws IOException {
         panelMessage = new JPanel(new BorderLayout());
         JPanel north = new JPanel(new FlowLayout());
@@ -248,9 +270,11 @@ public class OpenPGP {
                     Message m = keyHandler.receive(f);
                     showSaveFilePane(m);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    showMessage(e.getMessage());
+                //   e.printStackTrace();
                 } catch (PGPException e) {
-                    e.printStackTrace();
+                    showMessage(e.getMessage());
+                 //   e.printStackTrace();
                 }
             }
         });
@@ -259,6 +283,13 @@ public class OpenPGP {
         panelMessage.add(north, BorderLayout.NORTH);
         panelMessage.add(center, BorderLayout.CENTER);
    }
+
+    /**
+     * Metoda koja nudi opciju za prikaz i cuvanje poruke
+     *
+     * @param m
+     * @throws IOException
+     */
 
     private void showSaveFilePane(Message m) throws IOException {
         JPanel panel = new JPanel(new BorderLayout());
@@ -269,7 +300,7 @@ public class OpenPGP {
                 "Invalidni kljucevi: " + m.keysNotFound.toString() + "<br/>" + "Verifikovano: " + m.isVerified + "<br/></html>");
 
 
-        ver.setText("Lista ver: " + m.verifiers.toString());
+        ver.setText("Verifikovan potpis: " + m.verifiers.toString());
 
         panel.add(label, BorderLayout.NORTH);
         panel.add(ver, BorderLayout.SOUTH);
@@ -285,7 +316,6 @@ public class OpenPGP {
             int userSelection = chooser.showSaveDialog(frame);
 
             if (userSelection == JFileChooser.APPROVE_OPTION) {
-//            String fingerprint = Hex.toHexString(publicKeyRing.getPublicKey().getFingerprint()).toUpperCase();
                 String withExtension = chooser.getSelectedFile().getAbsolutePath() + ".txt";
                 FileOutputStream file = new FileOutputStream( withExtension );
                 file.write(m.msg.getBytes());
@@ -294,6 +324,11 @@ public class OpenPGP {
             }
         }
     }
+
+    /**
+     * Metoda koja inicijalizuje panel koji prikazuje kljuceve
+     *
+     */
 
     private void initPanelShowKeys() {
         JPanel p1 = new JPanel(new BorderLayout(5,5));
@@ -351,6 +386,11 @@ public class OpenPGP {
 //            }
 //        });
     }
+
+    /**
+     * Pomocna metoda koja se koristi za prikaz kljuceva
+     *
+     */
 
     private void createPopupMenu(){
         final JPopupMenu popupMenuPublic = new JPopupMenu();
@@ -426,6 +466,12 @@ public class OpenPGP {
         privateTable.setComponentPopupMenu(popupMenuPrivate);
     }
 
+    /**
+     * Opcija za uvoz kljuca
+     *
+     * @throws Exception
+     */
+
     private void importKeyRing() throws Exception {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Specify a file to save");
@@ -441,6 +487,14 @@ public class OpenPGP {
             showMessage("Uspeh.");
         }
     }
+
+    /**
+     * Eksportovanje iz tabele sa javnim kljucevima
+     *
+     * @param id
+     * @throws IOException
+     * @throws PGPException
+     */
 
     private void exportPublicKey(String id) throws IOException, PGPException {
         JFileChooser chooser = new JFileChooser();
@@ -463,6 +517,14 @@ public class OpenPGP {
         }
     }
 
+    /**
+     * Eksportovanje iz tabele sa privatnim kljucevima
+     *
+     * @param id
+     * @throws IOException
+     * @throws PGPException
+     */
+
     private void exportPrivateKey(String id) throws IOException, PGPException {
         JFileChooser chooser = new JFileChooser();
         chooser.setDialogTitle("Specify a file to save");
@@ -483,6 +545,12 @@ public class OpenPGP {
         }
     }
 
+    /**
+     * Brisanje kljuca i refresh public tabele
+     *
+     * @param id
+     */
+
     private void deleteAndRefreshPublic(String id) {
         try {
             keyHandler.deletePublicKey(publicModel.getKeyLongId(id));
@@ -495,6 +563,13 @@ public class OpenPGP {
         publicTable.repaint();
         publicTable.revalidate();
     }
+
+    /**
+     * Brisanje kljuca uz proveru sifre i refresh privatne  tabele
+     *
+     * @param password
+     * @param id
+     */
 
     private void deleteAndRefreshPrivate(String password, String id) {
         try {
@@ -509,6 +584,14 @@ public class OpenPGP {
         privateTable.repaint();
         privateTable.revalidate();
     }
+
+    /**
+     * Pomocna metoda za inicijalizaciju listenera menija
+     *
+     * @param popupMenu
+     * @param table
+     * @param tableModel
+     */
 
     private void setPopupMenuListeners(JPopupMenu popupMenu, JTable table, KeyTableModel tableModel){
 
@@ -540,6 +623,11 @@ public class OpenPGP {
             }
         });
     }
+
+    /**
+     * Inicijalizaja panela za generisanje kljuceva
+     *
+     */
 
     private void initPanelGenerateKeys(){
 
@@ -613,9 +701,20 @@ public class OpenPGP {
         panelGenerateKeys.add(panel, BorderLayout.CENTER);
     }
 
+    /**
+     * Prikaz poruke korisniku
+     *
+     * @param msg
+     */
+
     public void showMessage(String msg){
         JOptionPane.showMessageDialog(null, msg);
     }
+
+    /**
+     * Pomocne metode za refresovanje tabela
+     *
+     */
 
     public void refreshAllTables(){
         refreshPublicTable();
@@ -653,6 +752,13 @@ public class OpenPGP {
 
         listPrivate.setModel(new DefaultComboBoxModel(list.toArray()));
     }
+
+    /**
+     * Kreiranje kljuca koji ce se ubaciti u odgorajuci ring
+     *
+     * @param p
+     * @return
+     */
 
     public Key createKeyPublic(PGPPublicKeyRing p){
         String[] temp = p.getPublicKey().getUserIDs().next().split(" ");

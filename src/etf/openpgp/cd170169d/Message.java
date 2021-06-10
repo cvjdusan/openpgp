@@ -2,6 +2,11 @@ package etf.openpgp.cd170169d;
 
 import java.util.List;
 
+/**
+ * Klasa koja sadrzi poruku koju je potrebno prikazati prilikom primanja iste
+ *
+ */
+
 public class Message {
     String msg;
     List<String> verifiers;

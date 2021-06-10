@@ -5,8 +5,11 @@ import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * Pomocna klasa koja upravlja prikazom tabele kljuceva
+ *
+ */
 public class KeyTableModel extends AbstractTableModel {
 
     private List<Key> keys;
@@ -17,35 +20,72 @@ public class KeyTableModel extends AbstractTableModel {
         this.keys = new ArrayList<Key>();
     }
 
+    /**
+     * Osvezavanje podataka u tabeli
+     */
+
     public void refresh() {
         //summaries = new ArrayList<>(FileHandler.getCompletedPlayers());
         fireTableDataChanged();
     }
+
+    /**
+     * Dodavanje kljuca u tabelu
+     * @param k
+     */
 
     public void add(Key k){
         this.keys.add(k);
         refresh();
     }
 
+    /**
+     * Brisanje svih kljuceva u tabeli
+     */
+
     public void clearList(){
         this.keys.clear();
     }
+
+    /**
+     * Vraca broj redova u tabeli
+     * @return int
+     */
 
     @Override
     public int getRowCount() {
         return keys.size();
     }
 
+    /**
+     * Vraca broj kolona u tabeli
+     * @return int
+     */
+
     @Override
     public int getColumnCount() {
         return columnNames.length;
     }
+
+    /**
+     * Vraca ime kolone
+     *
+     * @param column
+     * @return
+     */
 
     @Override
     public String getColumnName(int column) {
         return columnNames[column];
     }
 
+    /**
+     * Vraca objetak u redu i koloni
+     *
+     * @param rowIndex
+     * @param columnIndex
+     * @return
+     */
 
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
@@ -62,7 +102,14 @@ public class KeyTableModel extends AbstractTableModel {
                 return null;
         }
     }
-    
+
+    /**
+     * Vraca Long vrednost kljuca
+     *
+     * @param id
+     * @return
+     */
+
     public Long getKeyLongId(String id){
         Long value = null;
         
@@ -76,9 +123,21 @@ public class KeyTableModel extends AbstractTableModel {
         return value;
     }
 
+    /**
+     * Brise kljuc iz reda
+     *
+     * @param id1
+     */
+
     public void deleteKey(String id1) {
         keys.removeIf( id -> id.equals(id1));
     }
+
+    /**
+     * Vraca opis kljuca
+     *
+     * @return
+     */
 
     public ArrayList<String> getKeysString() {
         ArrayList<String> s = new ArrayList<>();

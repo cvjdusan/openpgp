@@ -2,6 +2,9 @@ package etf.openpgp.cd170169d;
 
 import org.bouncycastle.openpgp.PGPKeyRing;
 
+/**
+ * Klasa koja opisuje PGP kljuc, sadrzi samo getere i setere
+ */
 public class Key {
     private String name;
     private String email;
