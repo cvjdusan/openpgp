@@ -11,14 +11,16 @@ public class Message {
     String msg;
     List<String> verifiers;
     List<Long> keysNotFound;
+    int alg;
     boolean isVerified;
     boolean sign;
 
-    public Message(String msg, List<String> verifiers, List<Long> keysNotFound, boolean verified, boolean sign) {
+    public Message(String msg, List<String> verifiers, List<Long> keysNotFound, boolean verified, boolean sign, int alg) {
         this.msg = msg;
         this.verifiers = verifiers;
         this.keysNotFound = keysNotFound;
         this.isVerified = verified;
         this.sign = sign;
+        this.alg = alg;
     }
 }

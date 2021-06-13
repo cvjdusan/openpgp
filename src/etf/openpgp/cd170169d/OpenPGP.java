@@ -18,6 +18,8 @@ import java.security.NoSuchProviderException;
 import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Glavna klasa aplikacije
@@ -211,17 +213,24 @@ public class OpenPGP {
             PGPSecretKeyRing s = null;
             ArrayList<PGPPublicKeyRing> list = new ArrayList<>();
             String password = "";
+            boolean err = false;
             if(enc.isSelected()) {
-                ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
-                lis.forEach(elem -> {
-                    //showMessage(elem.split(" ")[2]
-                    String id = elem.split(" ")[2];
-                    try {
-                        list.add(keyHandler.getPublicKeyRing(publicModel.getKeyLongId(id)));
-                    } catch (PGPException e) {
-                        e.printStackTrace();
-                    }
-                });
+                if(listPublic.isSelectionEmpty()) {
+                    showMessage("Niste odabrali kljuceve za enk");
+                    err = true;
+                }
+                else {
+                    ArrayList<String> lis = (ArrayList<String>) listPublic.getSelectedValuesList();
+                    lis.forEach(elem -> {
+                        //showMessage(elem.split(" ")[2]
+                        String id = elem.split(" ")[2];
+                        try {
+                            list.add(keyHandler.getPublicKeyRing(publicModel.getKeyLongId(id)));
+                        } catch (PGPException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                }
             }
 
             if(sign.isSelected()){
@@ -232,32 +241,46 @@ public class OpenPGP {
                     e.printStackTrace();
                 }
                 password = passw.getText();
+                if(password.equals("")) {
+                    err = true;
+                    showMessage("Sifra ne sme biti prazna.");
+                }
                 // s = listPrivate.
             }
 
-            JFileChooser chooser2 = new JFileChooser();
-            chooser2.setDialogTitle("Specify a file...");
-            int userSelection = chooser2.showSaveDialog(frame);
+            if(err == false) {
+                JFileChooser chooser2 = new JFileChooser();
+                chooser2.setDialogTitle("Specify a file...");
+                int userSelection = chooser2.showSaveDialog(frame);
+                if (userSelection == JFileChooser.APPROVE_OPTION) {
+                    String withExtension = chooser2.getSelectedFile().getAbsolutePath() + ".pgp";
+                    try {
+                        FileOutputStream file = new FileOutputStream(withExtension);
 
-            if (userSelection == JFileChooser.APPROVE_OPTION) {
-                String withExtension = chooser2.getSelectedFile().getAbsolutePath() + ".pgp";
-                try {
-                    FileOutputStream file = new FileOutputStream(withExtension);
-                    keyHandler.sendMessage(msg.toString(), enc.isSelected(), sign.isSelected(), comp.isSelected(), radix64.isSelected(), alg[0], password, file,
-                            s, list);
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
-                } catch (SignatureException e) {
-                    e.printStackTrace();
-                } catch (PGPException e) {
-                    e.printStackTrace();
+                            keyHandler.sendMessage(msg.toString(), enc.isSelected(), sign.isSelected(), comp.isSelected(), radix64.isSelected(), alg[0], password, file,
+                                    s, list);
+
+
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                        showMessage(e.getMessage());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        showMessage(e.getMessage());
+                    } catch (NoSuchAlgorithmException e) {
+                        e.printStackTrace();
+                        showMessage(e.getMessage());
+                    } catch (SignatureException e) {
+                        e.printStackTrace();
+                        showMessage(e.getMessage());
+                    } catch (PGPException e) {
+                        e.printStackTrace();
+                        showMessage(e.getMessage());
+                    }
                 }
             }
         });
+
 
         north.add(receive);
         receive.addActionListener(l -> {
@@ -296,11 +319,14 @@ public class OpenPGP {
         JLabel label = new JLabel();
         JLabel ver = new JLabel();
 
-        label.setText("<html> Potpis: " + m.sign + "<br/> " +
-                "Invalidni kljucevi: " + m.keysNotFound.toString() + "<br/>" + "Verifikovano: " + m.isVerified + "<br/></html>");
 
+//        label.setText("<html> Potpis: " + (m.sign == true ? "Ima" : "Nije potpisana") + "<br/> " +
+//                "Invalidni kljucevi: " + m.keysNotFound.toString() + "<br/>" + "Validna poruka: " + m.isVerified + "<br/></html>");
 
-        ver.setText("Verifikovan potpis: " + m.verifiers.toString());
+        label.setText("<html> Potpis: " + (m.sign ? "Postoji" : "Nije potpisana") + "<br/> " +
+                "Sim algoritam:" + codeToString(m.alg) + "<br/>" + "Validna poruka: " + m.isVerified + "<br/></html>");
+
+        ver.setText("Validan potpis od: " + m.verifiers.toString());
 
         panel.add(label, BorderLayout.NORTH);
         panel.add(ver, BorderLayout.SOUTH);
@@ -629,6 +655,32 @@ public class OpenPGP {
      *
      */
 
+    private final Pattern VALID_EMAIL_ADDRESS_REGEX =
+            Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,6}$", Pattern.CASE_INSENSITIVE);
+
+    private boolean validateMail(String emailStr) {
+        Matcher matcher = VALID_EMAIL_ADDRESS_REGEX.matcher(emailStr);
+        return matcher.find();
+    }
+
+    private String codeToString(int alg) {
+        String algS = "Nepoznat za ovu aplikaciju.";
+
+        if(alg == 1)
+            algS = "IDEA";
+        else if(alg == 2)
+            algS = "3DES";
+        else if(alg == 3)
+            algS = "CAST5";
+        else if(alg == 7)
+            algS = "AES128";
+        else if(alg == 0){
+            algS = "Nema";
+        }
+
+        return algS;
+    }
+
     private void initPanelGenerateKeys(){
 
         panelGenerateKeys = new JPanel(new BorderLayout());
@@ -680,13 +732,14 @@ public class OpenPGP {
 
         button.addActionListener(e -> {
             try {
-                if(!name.getText().equals("") && !email.getText().equals("") && password.getPassword().length != 0){
+                if(!name.getText().equals("") && !email.getText().equals("") && password.getPassword().length != 0
+                && validateMail(email.getText())){
                     keyHandler.createKeyRing(name.getText(), email.getText(), String.valueOf(password.getPassword()),
                             Integer.parseInt(listString1[op1[0]]), true);
                     refreshAllTables();
                     showMessage("Uspeh.");
                 } else {
-                    showMessage("Greska. Postoje prazna polja.");
+                    showMessage("Greska. Polja nisu validna.");
                 }
             } catch (NoSuchAlgorithmException noSuchAlgorithmException) {
                 noSuchAlgorithmException.printStackTrace();

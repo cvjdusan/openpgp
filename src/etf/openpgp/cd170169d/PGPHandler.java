@@ -143,14 +143,13 @@ public class PGPHandler {
                 keyEncryptor
         );
 
-        // za sad uvek true
-        if (encrypt) {
-            KeyPairGenerator keyPairGenerator1 = KeyPairGenerator.getInstance(RSA_ALG, provider);
-            keyPairGenerator1.initialize(keySize);
-            KeyPair keyPair1 = keyPairGenerator1.generateKeyPair();
-            PGPKeyPair pgpKeyPair1 = new JcaPGPKeyPair(PGPPublicKey.RSA_ENCRYPT, keyPair1, new Date());
-            pgpKeyRingGenerator.addSubKey(pgpKeyPair1);
-        }
+        // SUBKEY za enkripciju
+
+        KeyPairGenerator keyPairGenerator1 = KeyPairGenerator.getInstance(RSA_ALG, provider);
+        keyPairGenerator1.initialize(keySize);
+        KeyPair keyPair1 = keyPairGenerator1.generateKeyPair();
+        PGPKeyPair pgpKeyPair1 = new JcaPGPKeyPair(PGPPublicKey.RSA_ENCRYPT, keyPair1, new Date());
+        pgpKeyRingGenerator.addSubKey(pgpKeyPair1);
 
         PGPPublicKeyRing publicKeyRing = pgpKeyRingGenerator.generatePublicKeyRing();
         PGPSecretKeyRing secretKeyRing = pgpKeyRingGenerator.generateSecretKeyRing();
@@ -383,7 +382,7 @@ public class PGPHandler {
 
         FileInputStream file = new FileInputStream(f);
         BcPGPObjectFactory factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(file));
-        Object object = null;
+        Object object;
         String msg = null;
 
 
@@ -392,18 +391,17 @@ public class PGPHandler {
 
         boolean verified = true;
         boolean sign = false;
+        int alg = 0;
 
-        PGPOnePassSignatureList allSigns = null;
+        PGPOnePassSignatureList allSigns = null; // ostavljena lista
+
+        try {
+            object = factory.nextObject();
+        } catch (Exception e){
+            throw new PGPException("Integritet poruke je narusen");
+        }
 
         while(true){
-
-            try {
-                object = factory.nextObject();
-            } catch (Exception e){
-                throw new PGPException("Integritet poruke je narusen");
-            }
-
-            System.out.println("RADI");
 
             if(object == null)
                 break;
@@ -469,7 +467,7 @@ public class PGPHandler {
 
                         PGPSecretKeyRing selectedRing = (PGPSecretKeyRing) key.getRing();
                         PGPPublicKeyEncryptedData selectedData = null;
-                        
+
                         long id = selectedRing.getPublicKey().getKeyID();
                         for(int i = 0; i < encList.size(); i++){
                             PGPPublicKeyEncryptedData d = (PGPPublicKeyEncryptedData) encList.get(i);;
@@ -479,7 +477,7 @@ public class PGPHandler {
                                 break;
                             }
                         }
-                        
+
                         Iterator<PGPSecretKey> it = selectedRing.getSecretKeys();
 
                         PGPSecretKey skip = it.next();
@@ -488,20 +486,23 @@ public class PGPHandler {
                             throw new PGPException("Nema subkey za dekripciju!");
 
                         PGPSecretKey secretKey = it.next();
-
+                        PGPPrivateKey privateKey;
                         try {
-                            PGPPrivateKey privateKey = secretKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().build(password.toCharArray()));
-                            InputStream plain = selectedData.getDataStream(new BcPublicKeyDataDecryptorFactory(privateKey));
-                            factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(plain));
-
-                            if (selectedData.isIntegrityProtected() &&
-                                    selectedData.verify() == false) {
-                                throw new PGPException("Data integrity check greska!");
-                            }
-
+                            privateKey = secretKey.extractPrivateKey(new JcePBESecretKeyDecryptorBuilder().build(password.toCharArray()));
                         } catch (PGPException e) {
                             throw new PGPException("Pogresna sifra!");
                         }
+
+                        InputStream plain = selectedData.getDataStream(new BcPublicKeyDataDecryptorFactory(privateKey));
+                        PGPPublicKeyEncryptedData d = (PGPPublicKeyEncryptedData) encList.get(0);
+                        alg = d.getSymmetricAlgorithm(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(provider).build(privateKey));
+                        factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(plain));
+
+                        if (selectedData.isIntegrityProtected()){
+                            if(selectedData.verify() == false)
+                                throw new PGPException("Data integrity check greska!");
+                        }
+
 
                     }
                 } else
@@ -519,10 +520,10 @@ public class PGPHandler {
                 System.out.println("USAO U ONEPASS");
                 allSigns = (PGPOnePassSignatureList) object;
                 allSigns.forEach(o -> {
+                    System.out.println("RADI allSigns");
                     long id = o.getKeyID();
                     try {
                         PGPPublicKeyRing publicKeyRing = getPublicKeyRing(id);
-
                         if(publicKeyRing != null){
                             PGPPublicKey publicKey = publicKeyRing.getPublicKey();
                             o.init(new BcPGPContentVerifierBuilderProvider(), publicKey);
@@ -539,16 +540,16 @@ public class PGPHandler {
             if(object instanceof PGPLiteralData){
                 System.out.println("USAO U PGPLITERAL");
                 PGPLiteralData literalData = (PGPLiteralData) object;
-
                 InputStream data = literalData.getInputStream();
-
                 stream = new byte[data.available()];
+
 
                 data.read(stream);
 
                 msg = new String(stream);
 
-                if (allSigns != null) {
+                // jer moze da bude null ako nije usao u onepass
+                if (sign) {
                     for (int i = 0; i < allSigns.size(); i++) {
                         PGPOnePassSignature onePassSignature = allSigns.get(i);
                         if (!invalidKeys.contains(onePassSignature.getKeyID()))
@@ -560,46 +561,87 @@ public class PGPHandler {
             if (object instanceof PGPSignatureList) {
                 System.out.println("USAO U SIGLIST");
                 PGPSignatureList signs = (PGPSignatureList) object;
+                if(signs.size() == 1) {
+                    PGPSignature signature = signs.get(0);
+                    PGPPublicKeyRing publicKeyRing = getPublicKeyRing(signature.getKeyID());
 
-                for (int i = 0; i < signs.size(); i++) {
-                    PGPSignature signature = signs.get(i);
-                    if (allSigns != null){
-                        int position = allSigns.size() - i - 1;
-                        PGPOnePassSignature ops = allSigns.get(position);
-                        if (invalidKeys.contains(signature.getKeyID()) || !ops.verify(signature)) {
-                            verified = false;
-                        } else {
-                            PGPPublicKeyRing ring = pgpPublicKeyRings.getPublicKeyRing(signature.getKeyID());
-                            String username = ring.getPublicKey().getUserIDs().next();
-                            verifiers.add(username);
-                        }
+                    if (publicKeyRing == null) {
+                        throw new PGPException("Nije nadjen javni kljuc");
                     }
-                    else {
-                        PGPPublicKeyRing publicKeyRing = getPublicKeyRing(signature.getKeyID());
-                        if (publicKeyRing == null){
-                            throw new PGPException("Nije nadjen javni kljuc");
-                        }
 
+                    if (sign) {
+                        PGPOnePassSignature ops = allSigns.get(0);
+                        if (!invalidKeys.contains(signature.getKeyID()) && ops.verify(signature)) {
+                            String username = publicKeyRing.getPublicKey().getUserIDs().next();
+                            verifiers.add(username);
+                        } else
+                            verified = false;
+                    } else {
                         signature.init(new BcPGPContentVerifierBuilderProvider(), publicKeyRing.getPublicKey());
                         signature.update(stream);
 
-                        if (signature.verify()){
-                            PGPPublicKeyRing ring = pgpPublicKeyRings.getPublicKeyRing(publicKeyRing.getPublicKey().getKeyID());
+                        if (signature.verify()) {
+                            PGPPublicKeyRing ring = getPublicKeyRing(publicKeyRing.getPublicKey().getKeyID());
                             String username = ring.getPublicKey().getUserIDs().next();
                             verifiers.add(username);
-                        }
-                        else{
+                        } else {
                             verified = false;
                         }
                     }
                 }
+                // OSTAVLJENO ZA SVAKI SLUCAJ AKO POSTOJI NEKA LISTA POTPISTAA
+                else {
+                        // DA LI OSTAVITI KAO LISTU JER JE UVEK JEDAN ILI
+                        // da li je uvek jedan?
+//                for (int i = 0; i < signs.size(); i++) {
+//
+//                    PGPSignature signature = signs.get(i);
+//                    if (sign == true){
+//                        System.out.println("USAO U SIGLIST PETLJU");
+//                        int position = allSigns.size() - i - 1; // uvek nula ovo promeniti????
+//                        PGPOnePassSignature ops = allSigns.get(position);
+//                        if (!invalidKeys.contains(signature.getKeyID()) && ops.verify(signature)) {
+//                            PGPPublicKeyRing ring = pgpPublicKeyRings.getPublicKeyRing(signature.getKeyID());
+//                            String username = ring.getPublicKey().getUserIDs().next();
+//                            verifiers.add(username);
+//                        } else
+//                            verified = false;
+//                    }
+//                    else {
+//                        PGPPublicKeyRing publicKeyRing = getPublicKeyRing(signature.getKeyID());
+//                        if (publicKeyRing == null){
+//                            throw new PGPException("Nije nadjen javni kljuc");
+//                        }
+//
+//                        signature.init(new BcPGPContentVerifierBuilderProvider(), publicKeyRing.getPublicKey());
+//                        signature.update(stream);
+//
+//                        if (signature.verify()){
+//                            PGPPublicKeyRing ring = pgpPublicKeyRings.getPublicKeyRing(publicKeyRing.getPublicKey().getKeyID());
+//                            String username = ring.getPublicKey().getUserIDs().next();
+//                            verifiers.add(username);
+//                        }
+//                        else{
+//                            verified = false;
+//                        }
+//                    }
+//                }
+                }
+
+            }
+
+            try {
+                object = factory.nextObject();
+            } catch (Exception e){
+                throw new PGPException("Integritet poruke je narusen");
             }
         }
 
+
+        Message pgpMessage = new Message(msg, verifiers, invalidKeys, verified, sign, alg);
+
         if(!verified)
             throw new PGPException("Potpis nije validan ili nemate javni kljuc!");
-
-        Message pgpMessage = new Message(msg, verifiers, invalidKeys, verified, sign);
 
         return pgpMessage;
     }
@@ -712,7 +754,7 @@ public class PGPHandler {
 
     private byte [] sign(PGPSecretKeyRing secretKey, String password, byte[] stream) throws PGPException, IOException {
 
-        PGPPrivateKey privateKey = null;
+        PGPPrivateKey privateKey;
 
 
         // privateKey posiljaoca
@@ -728,8 +770,10 @@ public class PGPHandler {
 
         subpacketGenerator.setSignerUserID(false, secretKey.getPublicKey().getUserIDs().next().getBytes());
 
+        subpacketGenerator.setPreferredSymmetricAlgorithms(false, new int[]{ PGPEncryptedData.AES_128, SymmetricKeyAlgorithmTags.TRIPLE_DES});
         signatureGenerator.setHashedSubpackets(subpacketGenerator.generate());
 
+        //ovo je ops param. header za racun potpisa i on nije ugnjezned ( false)
         PGPOnePassSignature pgpOnePassSignature = signatureGenerator.generateOnePassVersion(false);
 
         signatureGenerator.update(stream);
@@ -801,6 +845,7 @@ public class PGPHandler {
         byte [] stream = text.getBytes();
 
         if(sign) {
+            if(secretKey == null) throw new PGPException("Niste odabrali kljuc za potpis");
             stream = sign(secretKey, password, stream);
         } else {
             // writeToFileLiteralData
@@ -822,6 +867,7 @@ public class PGPHandler {
         }
 
         if(enc) {
+            if (publicKeys.size() == 0) throw new PGPException("Niste izabrali kljuceve za enkripciju");
             stream = encrypt(alg, publicKeys, stream);
         }
 
