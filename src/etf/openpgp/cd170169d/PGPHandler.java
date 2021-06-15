@@ -406,6 +406,8 @@ public class PGPHandler {
             if(object == null)
                 break;
 
+            System.out.println("PETLJA");
+
             // znaci jeste enkriptovana
             if(object instanceof PGPEncryptedDataList){
                 System.out.println("USAO U ENCTDATALIST");
@@ -494,8 +496,9 @@ public class PGPHandler {
                         }
 
                         InputStream plain = selectedData.getDataStream(new BcPublicKeyDataDecryptorFactory(privateKey));
-                        PGPPublicKeyEncryptedData d = (PGPPublicKeyEncryptedData) encList.get(0);
-                        alg = d.getSymmetricAlgorithm(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(provider).build(privateKey));
+                        //TODO: UPOZORENJE DA NEKAD KAZE DA JE RSA BLOCK PREVELIKI
+                        //PGPPublicKeyEncryptedData d = (PGPPublicKeyEncryptedData) encList.get(0);
+                        //alg = d.getSymmetricAlgorithm(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(provider).build(privateKey));
                         factory = new BcPGPObjectFactory(PGPUtil.getDecoderStream(plain));
 
                         if (selectedData.isIntegrityProtected()){
@@ -537,27 +540,6 @@ public class PGPHandler {
                 });
             }
 
-            if(object instanceof PGPLiteralData){
-                System.out.println("USAO U PGPLITERAL");
-                PGPLiteralData literalData = (PGPLiteralData) object;
-                InputStream data = literalData.getInputStream();
-                stream = new byte[data.available()];
-
-
-                data.read(stream);
-
-                msg = new String(stream);
-
-                // jer moze da bude null ako nije usao u onepass
-                if (sign) {
-                    for (int i = 0; i < allSigns.size(); i++) {
-                        PGPOnePassSignature onePassSignature = allSigns.get(i);
-                        if (!invalidKeys.contains(onePassSignature.getKeyID()))
-                            onePassSignature.update(stream);
-                    }
-                }
-            }
-
             if (object instanceof PGPSignatureList) {
                 System.out.println("USAO U SIGLIST");
                 PGPSignatureList signs = (PGPSignatureList) object;
@@ -577,6 +559,7 @@ public class PGPHandler {
                         } else
                             verified = false;
                     } else {
+                        System.out.println("USAO U SIGLIST sign false");
                         signature.init(new BcPGPContentVerifierBuilderProvider(), publicKeyRing.getPublicKey());
                         signature.update(stream);
 
@@ -628,6 +611,27 @@ public class PGPHandler {
 //                }
                 }
 
+            }
+
+            if(object instanceof PGPLiteralData){
+                System.out.println("USAO U PGPLITERAL");
+                PGPLiteralData literalData = (PGPLiteralData) object;
+                InputStream data = literalData.getInputStream();
+                stream = new byte[data.available()];
+
+
+                data.read(stream);
+
+                msg = new String(stream);
+
+                // jer moze da bude null ako nije usao u onepass
+                if (sign) {
+                    for (int i = 0; i < allSigns.size(); i++) {
+                        PGPOnePassSignature onePassSignature = allSigns.get(i);
+                        if (!invalidKeys.contains(onePassSignature.getKeyID()))
+                            onePassSignature.update(stream);
+                    }
+                }
             }
 
             try {

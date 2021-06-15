@@ -324,7 +324,8 @@ public class OpenPGP {
 //                "Invalidni kljucevi: " + m.keysNotFound.toString() + "<br/>" + "Validna poruka: " + m.isVerified + "<br/></html>");
 
         label.setText("<html> Potpis: " + (m.sign ? "Postoji" : "Nije potpisana") + "<br/> " +
-                "Sim algoritam:" + codeToString(m.alg) + "<br/>" + "Validna poruka: " + m.isVerified + "<br/></html>");
+              //  "Sim algoritam:" + codeToString(m.alg) +
+                "<br/>" + "Validna poruka: " + m.isVerified + "<br/></html>");
 
         ver.setText("Validan potpis od: " + m.verifiers.toString());
 
